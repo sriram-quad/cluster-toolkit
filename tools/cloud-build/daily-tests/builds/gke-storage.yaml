@@ -1,5 +1,16 @@
 # Copyright 2026 Google LLC
-# (License headers removed for brevity)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 ---
 tags:
@@ -27,6 +38,7 @@ steps:
   env:
   - "ANSIBLE_HOST_KEY_CHECKING=false"
   - "ANSIBLE_CONFIG=/workspace/tools/cloud-build/ansible.cfg"
+  secretEnv: ['GCLUSTER_GCS_PATH']
   args:
   - -c
   - |
@@ -44,20 +56,25 @@ steps:
     SG_EXAMPLE=examples/storage-gke.yaml
 
     # Add remote-node and ensure N2 hardware for GCS Fuse performance
-    echo '  - id: remote-node'                     >> $${SG_EXAMPLE}
+    echo '  - id: remote-node'                 >> $${SG_EXAMPLE}
     echo '    source: modules/compute/vm-instance' >> $${SG_EXAMPLE}
     echo '    use: [network1]'                     >> $${SG_EXAMPLE}
     echo '    settings:'                           >> $${SG_EXAMPLE}
     echo '      machine_type: n2-standard-4'       >> $${SG_EXAMPLE}
     echo '      zone: us-central1-b'               >> $${SG_EXAMPLE}
 
-    # FIX: Generate the SSH keys so Ansible can authenticate with the VM
-    mkdir -p /root/.ssh
-    ssh-keygen -t rsa -f /root/.ssh/id_rsa -N "" -q
-    chmod 600 /root/.ssh/id_rsa
+    # Generate the SSH keys in the builder home directory
+    mkdir -p /builder/home/.ssh
+    ssh-keygen -t rsa -f /builder/home/.ssh/id_rsa -N "" -q
+    chmod 600 /builder/home/.ssh/id_rsa
 
     bash tools/add_ttl_label.sh "$${SG_EXAMPLE}"
 
     ansible-playbook tools/cloud-build/daily-tests/ansible_playbooks/base-integration-test.yml \
       --user=sa_106486320838376751393 --extra-vars="project=${PROJECT_ID} build=$${BUILD_ID_SHORT}" \
       --extra-vars="@tools/cloud-build/daily-tests/tests/gke-storage.yml"
+
+availableSecrets:
+  secretManager:
+  - versionName: projects/${PROJECT_ID}/secrets/gcluster-develop-release-bucket/versions/latest
+    env: 'GCLUSTER_GCS_PATH'

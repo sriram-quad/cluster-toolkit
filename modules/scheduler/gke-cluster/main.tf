@@ -258,7 +258,7 @@ resource "google_container_cluster" "gke_cluster" {
 
   ## --- CHANGED TIMEOUT BLOCK ---
   timeouts {
-    create = "90m"  # Increased from var.timeout_create to accommodate A3 Ultra hardware
+    create = var.timeout_create  # Increased from var.timeout_create to accommodate A3 Ultra hardware
     update = var.timeout_update
   }
   ## -----------------------------

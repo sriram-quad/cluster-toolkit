@@ -404,7 +404,7 @@ variable "labels" {
 variable "timeout_create" {
   description = "Timeout for creating a node pool"
   type        = string
-  default     = null
+  default     = "90m"
 }
 
 variable "timeout_update" {

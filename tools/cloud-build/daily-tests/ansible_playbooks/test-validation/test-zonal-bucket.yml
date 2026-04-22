@@ -88,7 +88,7 @@
         that:
         - fio_results.jobs[0].read.bw_mean >= 1000
         - fio_results.jobs[0].read.iops_mean >= 300
-        fail_msg: "Performance thresholds not met."
+        fail_msg: "FIO read performance thresholds not met. Bandwidth: {{ fio_results.jobs[0].read.bw_mean }} KB/s (expected >= 1000 KB/s), IOPS: {{ fio_results.jobs[0].read.iops_mean }} (expected >= 300)."
   rescue:
     - name: Handle Low Priority Failure
       ansible.builtin.debug:
