@@ -53,7 +53,12 @@ steps:
     BLUEPRINT="examples/hpc-enterprise-slurm.yaml"
     bash tools/add_ttl_label.sh $${BLUEPRINT}
 
+    # 1. Add the fix_vpc_name.py script execution
+    python3 tools/fix_vpc_name.py $${BLUEPRINT} "${_TEST_PREFIX}"
+
+    # 2. Add the extra-vars for test_prefix and use_fixed_vpc
     ansible-playbook tools/cloud-build/daily-tests/ansible_playbooks/slurm-integration-test.yml \
+      --extra-vars="test_prefix=${_TEST_PREFIX} use_fixed_vpc=true" \
       --user=sa_106486320838376751393 --extra-vars="project=${PROJECT_ID} build=$${BUILD_ID_SHORT}" \
       --extra-vars="@tools/cloud-build/daily-tests/tests/hpc-enterprise-slurm.yml"
   secretEnv: ['GCLUSTER_GCS_PATH']
