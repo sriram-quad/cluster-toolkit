@@ -46,7 +46,7 @@ steps:
     BUILD_ID_FULL=$BUILD_ID
     BUILD_ID_SHORT=$${BUILD_ID_FULL:0:6}
     BLUEPRINT="examples/pfs-managed-lustre-vm.yaml"
-    
+
     bash tools/add_ttl_label.sh $${BLUEPRINT}
 
     # 1. Add the fix_vpc_name.py script execution

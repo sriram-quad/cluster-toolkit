@@ -50,7 +50,7 @@ steps:
     BUILD_ID_SHORT=$${BUILD_ID_FULL:0:6}
     BLUEPRINT="examples/pfs-managed-lustre-slurm.yaml"
     bash tools/add_ttl_label.sh "$${BLUEPRINT}"
-    python3 tools/fix_vpc_name.py $${BLUEPRINT}" "${_TEST_PREFIX}"
+    python3 tools/fix_vpc_name.py "$${BLUEPRINT}" "${_TEST_PREFIX}"
     ansible-playbook tools/cloud-build/daily-tests/ansible_playbooks/slurm-integration-test.yml \
       --extra-vars="test_prefix=${_TEST_PREFIX}" \
       --extra-vars="use_fixed_vpc=true" \
