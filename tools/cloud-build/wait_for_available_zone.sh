@@ -25,12 +25,18 @@ fi
 ZONE_EXPORT=$(mktemp)
 ZONE_OUTPUT=$(mktemp)
 
-MAX_WAIT_SECONDS=28800
+# Keep this below the Kueue Job's activeDeadlineSeconds minus deploy/test time,
+# otherwise Kubernetes kills the pod before the wait loop can give up cleanly.
+MAX_WAIT_SECONDS="${MAX_ZONE_WAIT_SECONDS:-28800}"
+if [[ ! "${MAX_WAIT_SECONDS}" =~ ^[0-9]+$ ]]; then
+	echo "WARN: Invalid MAX_ZONE_WAIT_SECONDS='${MAX_WAIT_SECONDS}', using 28800." >&2
+	MAX_WAIT_SECONDS=28800
+fi
 START_TIME=$SECONDS
 
 while true; do
-	if [ $((SECONDS - START_TIME)) -gt $MAX_WAIT_SECONDS ]; then
-		echo "--- FATAL ERROR: Timed out waiting for available zone after 8 hours. Exiting. ---" >&2
+	if [ $((SECONDS - START_TIME)) -gt "$MAX_WAIT_SECONDS" ]; then
+		echo "--- FATAL ERROR: Timed out waiting for available zone after ${MAX_WAIT_SECONDS}s. Exiting. ---" >&2
 		exit 1
 	fi
 	# Run the script in a subshell, streaming stdout and stderr to the console and a log file.
@@ -41,6 +47,7 @@ while true; do
 		# If it succeeds, these lines will execute and save the exports.
 		echo "export ZONE=\"${ZONE}\"" >"$ZONE_EXPORT"
 		echo "export PROVISIONING_MODEL=\"${PROVISIONING_MODEL}\"" >>"$ZONE_EXPORT"
+		echo "export LUSTRE_ZONE=\"${LUSTRE_ZONE:-}\"" >>"$ZONE_EXPORT"
 	) 2>&1 | tee "$ZONE_OUTPUT"
 
 	EXIT_CODE=${PIPESTATUS[0]}

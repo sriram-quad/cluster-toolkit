@@ -15,6 +15,10 @@
 
 """Safely extracts or updates EXCLUDE_ZONES in Kubernetes Job manifests.
 
+The environment variable name defaults to EXCLUDE_ZONES but can be overridden
+(e.g. LUSTRE_EXCLUDE_ZONES) so that storage-specific capacity failures do not
+exclude a zone for compute placement as well.
+
 Uses only the Python 3 standard library so it executes reliably in minimal
 environments (such as gcr.io/cloud-builders/gcloud) without external dependencies.
 """
@@ -24,17 +28,26 @@ import os
 import re
 import sys
 
+DEFAULT_VAR_NAME = "EXCLUDE_ZONES"
+_VAR_NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 
-def update_job_yaml(content: str, zones_to_inject: str = None) -> tuple:
-    """Extracts or updates EXCLUDE_ZONES in the target test runner container.
+
+def update_job_yaml(
+    content: str, zones_to_inject: str = None, var_name: str = DEFAULT_VAR_NAME
+) -> tuple:
+    """Extracts or updates a zone-list env var in the target test runner container.
 
     Args:
         content: The text content of the job.yaml file.
         zones_to_inject: Space-separated zones to inject. If None, only extracts.
+        var_name: Name of the environment variable to extract or update.
 
     Returns:
         tuple of (extracted_zones: str, modified_content: str)
     """
+    if not _VAR_NAME_RE.match(var_name):
+        raise ValueError(f"Invalid environment variable name: {var_name!r}")
+    var_re = re.escape(var_name)
     lines = content.splitlines(keepends=True)
 
     # 1. Locate the containers block
@@ -117,7 +130,7 @@ def update_job_yaml(content: str, zones_to_inject: str = None) -> tuple:
 
     c_lines = lines[target_start:target_end]
 
-    # 3. Search for EXCLUDE_ZONES inside target container
+    # 3. Search for the zone-list env var inside target container
     extracted_val = ""
     value_line_idx = -1
     env_line_idx = -1
@@ -150,7 +163,7 @@ def update_job_yaml(content: str, zones_to_inject: str = None) -> tuple:
                 first_env_item_idx = abs_i
                 first_env_item_indent = m_it.group(1)
 
-        if re.search(r'name:\s*["\']?EXCLUDE_ZONES["\']?\s*(?:#.*)?$', line):
+        if re.search(r'name:\s*["\']?' + var_re + r'["\']?\s*(?:#.*)?$', line):
             # Check backwards (if value: preceded name:)
             for b in range(abs_i - 1, max(target_start, abs_i - 3), -1):
                 if lines[b].strip().startswith("#"):
@@ -197,13 +210,13 @@ def update_job_yaml(content: str, zones_to_inject: str = None) -> tuple:
         else:
             it_ind = env_indent
             val_ind = it_ind + "  "
-        injection = f'{it_ind}- name: EXCLUDE_ZONES\n{val_ind}value: "{zones_to_inject}"\n'
+        injection = f'{it_ind}- name: {var_name}\n{val_ind}value: "{zones_to_inject}"\n'
         lines.insert(env_line_idx + 1, injection)
     elif env_empty_idx != -1:
         # Replace empty flow list 'env: []' with block list
         lines[env_empty_idx] = (
             f'{env_indent}env:\n'
-            f'{env_indent}- name: EXCLUDE_ZONES\n'
+            f'{env_indent}- name: {var_name}\n'
             f'{env_indent}  value: "{zones_to_inject}"\n'
         )
     else:
@@ -218,13 +231,13 @@ def update_job_yaml(content: str, zones_to_inject: str = None) -> tuple:
                 img_ind = m.group(1)
                 break
         if img_line_idx != -1:
-            injection = f'{img_ind}env:\n{img_ind}- name: EXCLUDE_ZONES\n{img_ind}  value: "{zones_to_inject}"\n'
+            injection = f'{img_ind}env:\n{img_ind}- name: {var_name}\n{img_ind}  value: "{zones_to_inject}"\n'
             lines.insert(img_line_idx + 1, injection)
         else:
             c_base_ind = " " * (
                 item_indent + 2 if item_indent is not None else 8
             )
-            injection = f'{c_base_ind}env:\n{c_base_ind}- name: EXCLUDE_ZONES\n{c_base_ind}  value: "{zones_to_inject}"\n'
+            injection = f'{c_base_ind}env:\n{c_base_ind}- name: {var_name}\n{c_base_ind}  value: "{zones_to_inject}"\n'
             lines.insert(target_end, injection)
 
     return extracted_val, "".join(lines)
@@ -232,14 +245,25 @@ def update_job_yaml(content: str, zones_to_inject: str = None) -> tuple:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Update or extract EXCLUDE_ZONES in a Kubernetes Job manifest."
+        description=(
+            "Update or extract a zone-list env var (default EXCLUDE_ZONES) "
+            "in a Kubernetes Job manifest."
+        )
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
-        "--extract", action="store_true", help="Extract existing EXCLUDE_ZONES"
+        "--extract", action="store_true", help="Extract the existing zone list"
     )
     group.add_argument(
-        "--inject", action="store_true", help="Inject or update EXCLUDE_ZONES"
+        "--inject", action="store_true", help="Inject or update the zone list"
+    )
+    parser.add_argument(
+        "--var",
+        default=DEFAULT_VAR_NAME,
+        help=(
+            "Environment variable to read/write (default: EXCLUDE_ZONES). "
+            "Use LUSTRE_EXCLUDE_ZONES for Managed Lustre capacity failures."
+        ),
     )
     parser.add_argument(
         "--file",
@@ -261,11 +285,11 @@ def main():
         content = f.read()
 
     if args.extract:
-        val, _ = update_job_yaml(content, None)
+        val, _ = update_job_yaml(content, None, args.var)
         if val:
             print(val)
     elif args.inject:
-        _, modified = update_job_yaml(content, args.zones)
+        _, modified = update_job_yaml(content, args.zones, args.var)
         tmp_file = f"{args.file}.tmp"
         with open(tmp_file, "w", encoding="utf-8") as f:
             f.write(modified)

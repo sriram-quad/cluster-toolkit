@@ -60,8 +60,13 @@ MAX_RETRIES=3
 RETRY_DELAY=300
 ATTEMPT=1
 ACCUMULATED_EXCLUDE_ZONES=""
+ACCUMULATED_LUSTRE_EXCLUDE_ZONES=""
 if [ -f "$JOB_FILE" ]; then
 	ACCUMULATED_EXCLUDE_ZONES=$(python3 "${SCRIPT_DIR}/update_job_exclude_zones.py" --extract --file "$JOB_FILE" 2>/dev/null || true)
+	ACCUMULATED_LUSTRE_EXCLUDE_ZONES=$(python3 "${SCRIPT_DIR}/update_job_exclude_zones.py" --extract --var LUSTRE_EXCLUDE_ZONES --file "$JOB_FILE" 2>/dev/null || true)
+	if [ "$ACCUMULATED_LUSTRE_EXCLUDE_ZONES" == "none" ]; then
+		ACCUMULATED_LUSTRE_EXCLUDE_ZONES=""
+	fi
 fi
 
 while true; do
@@ -122,14 +127,35 @@ while true; do
 
 	# Dynamically extract the failed zone from the job logs if failure was due to capacity exhaustion
 	FAILED_ZONE=$(sed -n 's/.*resource exhausted: not enough resources available to fulfill the request in \([a-z0-9-]*\).*/\1/p' "$JOB_LOGS" | tail -n 1 || true)
+
+	# Determine which resource ran out. A Managed Lustre stockout must not ban the
+	# compute (TPU/VM) zone: the compute capacity found there may be the only one
+	# available (see b/580866570).
+	EXHAUSTED_RESOURCE=$(bash "${SCRIPT_DIR}/classify_exhausted_resource.sh" "$JOB_LOGS" 2>/dev/null || echo "compute")
+
 	if [ -z "$FAILED_ZONE" ]; then
 		# Only fall back to deployed zone if the logs confirm a VM/Lustre capacity or stockout error
 		if grep -q -i -E "ZONE_RESOURCE_POOL_EXHAUSTED|not enough resources available|resource exhausted|stockout" "$JOB_LOGS"; then
-			FAILED_ZONE=$(sed -n 's/.*Deploying in ZONE: \([a-z0-9-]*\).*/\1/p' "$JOB_LOGS" | tail -n 1 || true)
+			if [ "$EXHAUSTED_RESOURCE" == "lustre" ]; then
+				FAILED_ZONE=$(sed -n 's/.*Managed Lustre ZONE: \([a-z0-9-]*\).*/\1/p' "$JOB_LOGS" | tail -n 1 || true)
+			fi
+			if [ -z "$FAILED_ZONE" ]; then
+				FAILED_ZONE=$(sed -n 's/.*Deploying in ZONE: \([a-z0-9-]*\).*/\1/p' "$JOB_LOGS" | tail -n 1 || true)
+			fi
 		fi
 	fi
 
-	if [ -n "$FAILED_ZONE" ] && [ -f "$JOB_FILE" ]; then
+	if [ -n "$FAILED_ZONE" ] && [ -f "$JOB_FILE" ] && [ "$EXHAUSTED_RESOURCE" == "lustre" ]; then
+		echo "INFO: Detected Managed Lustre capacity exhaustion in zone: ${FAILED_ZONE} (compute zone stays eligible)"
+		if [ -z "$ACCUMULATED_LUSTRE_EXCLUDE_ZONES" ]; then
+			ACCUMULATED_LUSTRE_EXCLUDE_ZONES="${FAILED_ZONE}"
+		elif [[ ! " ${ACCUMULATED_LUSTRE_EXCLUDE_ZONES} " == *" ${FAILED_ZONE} "* ]]; then
+			ACCUMULATED_LUSTRE_EXCLUDE_ZONES="${ACCUMULATED_LUSTRE_EXCLUDE_ZONES} ${FAILED_ZONE}"
+		fi
+
+		echo "INFO: Injecting LUSTRE_EXCLUDE_ZONES='${ACCUMULATED_LUSTRE_EXCLUDE_ZONES}' into ${JOB_FILE} for attempt $((ATTEMPT + 1))..."
+		python3 "${SCRIPT_DIR}/update_job_exclude_zones.py" --inject --var LUSTRE_EXCLUDE_ZONES --file "$JOB_FILE" --zones "$ACCUMULATED_LUSTRE_EXCLUDE_ZONES"
+	elif [ -n "$FAILED_ZONE" ] && [ -f "$JOB_FILE" ]; then
 		echo "INFO: Detected capacity/resource exhaustion in zone: ${FAILED_ZONE}"
 		if [ -z "$ACCUMULATED_EXCLUDE_ZONES" ]; then
 			ACCUMULATED_EXCLUDE_ZONES="${FAILED_ZONE}"

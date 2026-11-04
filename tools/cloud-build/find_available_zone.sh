@@ -316,6 +316,59 @@ check_lustre_quota() {
 		return 1
 	fi
 }
+
+# Returns 0 if the zone is listed in LUSTRE_EXCLUDE_ZONES (space or comma separated).
+is_lustre_excluded() {
+	local zone=$1
+	if [[ -z "${LUSTRE_EXCLUDE_ZONES:-}" || "${LUSTRE_EXCLUDE_ZONES}" == "none" ]]; then
+		return 1
+	fi
+	[[ " ${LUSTRE_EXCLUDE_ZONES//,/ } " == *" ${zone} "* ]]
+}
+
+# Picks the zone for the Managed Lustre instance that will serve compute in
+# $1 and stores it in SELECTED_LUSTRE_ZONE.
+#
+# The compute zone itself is always preferred (best performance). When
+# LUSTRE_CROSS_ZONE=true, any other Lustre-capable zone in the same region is
+# also accepted: Lustre is reachable from every zone of the regional VPC, so a
+# Lustre stockout in the compute zone no longer discards scarce TPU/GPU
+# capacity found there (b/580866570).
+SELECTED_LUSTRE_ZONE=""
+select_lustre_zone() {
+	local compute_zone=$1
+	local region=${compute_zone%-*}
+	SELECTED_LUSTRE_ZONE=""
+
+	local -a candidates=("${compute_zone}")
+	if [[ "${LUSTRE_CROSS_ZONE:-false}" == "true" ]]; then
+		local lz
+		while IFS= read -r lz; do
+			if [[ -n "${lz}" && "${lz}" != "${compute_zone}" && "${lz%-*}" == "${region}" ]]; then
+				candidates+=("${lz}")
+			fi
+		done <<<"${LUSTRE_ZONES}"
+	fi
+
+	local candidate
+	for candidate in "${candidates[@]}"; do
+		if is_lustre_excluded "${candidate}"; then
+			echo "INFO: Managed Lustre zone ${candidate} excluded due to known Managed Lustre capacity exhaustion."
+			continue
+		fi
+		if ! echo "${LUSTRE_ZONES}" | grep -x -q "${candidate}"; then
+			echo "INFO: Managed Lustre not available in zone ${candidate}."
+			continue
+		fi
+		if ! check_lustre_quota "${candidate}"; then
+			echo "INFO: Lustre quota check failed in zone ${candidate}."
+			continue
+		fi
+		SELECTED_LUSTRE_ZONE="${candidate}"
+		return 0
+	done
+	return 1
+}
 declare -A CPU_QUOTA_CACHE
 check_cpu_quota() {
 	local region=$1
@@ -427,19 +480,12 @@ for PROVISIONING_MODEL in "${PROVISIONING_MODELS[@]}"; do
 		fi
 
 		if [[ "${CHECK_LUSTRE:-false}" == "true" ]]; then
-			if [[ -n "${LUSTRE_EXCLUDE_ZONES:-}" && "${LUSTRE_EXCLUDE_ZONES}" != "none" ]]; then
-				if [[ " ${LUSTRE_EXCLUDE_ZONES//,/ } " == *" ${ZONE} "* ]]; then
-					echo "INFO: Skipping ${ZONE} - Zone excluded due to known Managed Lustre capacity exhaustion."
-					continue
+			if ! select_lustre_zone "${ZONE}"; then
+				if [[ "${LUSTRE_CROSS_ZONE:-false}" == "true" ]]; then
+					echo "INFO: Skipping ${ZONE} - No eligible Managed Lustre zone in region ${REGION}."
+				else
+					echo "INFO: Skipping ${ZONE} - Managed Lustre not available, excluded or out of quota in this zone."
 				fi
-			fi
-
-			if ! echo "${LUSTRE_ZONES}" | grep -x -q "${ZONE}"; then
-				echo "INFO: Skipping ${ZONE} - Managed Lustre not available in this zone."
-				continue
-			fi
-			if ! check_lustre_quota "${ZONE}"; then
-				echo "INFO: Skipping ${ZONE} - Lustre quota check failed in zone ${ZONE}."
 				continue
 			fi
 		fi
@@ -474,6 +520,11 @@ if [[ "${SUCCESS}" == "true" ]]; then
 	echo "Deploying in ZONE: ${SELECTED_ZONE}, MODEL: ${PROVISIONING_MODEL}"
 	export ZONE="${SELECTED_ZONE}"
 	export PROVISIONING_MODEL="${PROVISIONING_MODEL}"
+	if [[ "${CHECK_LUSTRE:-false}" == "true" ]]; then
+		# Parsed by submit_and_monitor_kueue_job.sh to attribute Lustre stockouts.
+		echo "Managed Lustre ZONE: ${SELECTED_LUSTRE_ZONE}"
+		export LUSTRE_ZONE="${SELECTED_LUSTRE_ZONE}"
+	fi
 else
 	echo "--- DEPLOYMENT FAILED(Couldn't find a zone to deploy) ---" >&2
 	exit 1

@@ -93,6 +93,13 @@ steps:
               value: "true"
             - name: REQUIRED_LUSTRE_GB
               value: "18000"
+            # Allow Managed Lustre in another zone of the TPU's region so a Lustre
+            # stockout does not discard scarce TPU capacity (b/580866570).
+            - name: LUSTRE_CROSS_ZONE
+              value: "true"
+            # Must stay below activeDeadlineSeconds minus deploy/test/destroy time.
+            - name: MAX_ZONE_WAIT_SECONDS
+              value: "9000"
             - name: ANSIBLE_HOST_KEY_CHECKING
               value: "false"
             - name: ANSIBLE_CONFIG
@@ -168,6 +175,10 @@ steps:
               sed -i 's/^  tpu_static_nodes:.*/  tpu_static_nodes: 1/' \$$BLUEPRINT
               sed -i 's/^  tpu_dynamic_max_nodes:.*/  tpu_dynamic_max_nodes: 1/' \$$BLUEPRINT
               sed -i 's/^  lustre_size_gib:.*/  lustre_size_gib: 18000/' \$$BLUEPRINT
+              if [ -n "\$${LUSTRE_ZONE:-}" ] && [ "\$${LUSTRE_ZONE}" != "\$$ZONE" ]; then
+                echo "INFO: Placing Managed Lustre in \$${LUSTRE_ZONE} (TPU zone: \$$ZONE)."
+                sed -i "s/remote_mount: lustrefs/remote_mount: lustrefs\n      zone: \$${LUSTRE_ZONE}/" \$$BLUEPRINT
+              fi
               sed -i 's/machine_type: n2d-standard-4/machine_type: c2-standard-4/g' \$$BLUEPRINT
 
               ENABLE_SPOT="true"
