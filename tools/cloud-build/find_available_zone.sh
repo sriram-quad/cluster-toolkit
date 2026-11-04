@@ -412,29 +412,44 @@ check_cpu_quota() {
 	fi
 }
 
-if ! GCS_CONTENT=$(gcloud storage cat "${OPTIONS_GCS_PATH}"); then
-	echo "ERROR: Failed to read ${OPTIONS_GCS_PATH}." >&2
-	exit 1
-fi
-
 declare -a ZONES_ARRAY=()
-while IFS= read -r line; do
-	if [[ -n "${line}" ]]; then
-		ZONES_ARRAY+=("${line}")
+declare -a PROVISIONING_MODELS=()
+TPU_RESERVATION_NAME="${TPU_RESERVATION_NAME:-}"
+
+if [[ -n "${TPU_RESERVATION_NAME}" ]]; then
+	# Reserved capacity is guaranteed, so there is nothing to probe: deploy into
+	# the reservation's zone. Storage checks (Lustre/Filestore) still apply.
+	if [[ -z "${TPU_RESERVATION_ZONE:-}" ]]; then
+		echo "ERROR: TPU_RESERVATION_ZONE must be set when TPU_RESERVATION_NAME is set." >&2
+		exit 1
 	fi
-done <<<"${GCS_CONTENT}"
-if [[ "${#ZONES_ARRAY[@]}" -eq 0 ]]; then
-	echo "ERROR: No valid zones found in ${OPTIONS_GCS_PATH}" >&2
-	exit 1
+	echo "INFO: Using reservation ${TPU_RESERVATION_NAME} in ${TPU_RESERVATION_ZONE}; skipping capacity probe."
+	ZONES_ARRAY=("${TPU_RESERVATION_ZONE}")
+	PROVISIONING_MODELS=("RESERVATION")
+else
+	if ! GCS_CONTENT=$(gcloud storage cat "${OPTIONS_GCS_PATH}"); then
+		echo "ERROR: Failed to read ${OPTIONS_GCS_PATH}." >&2
+		exit 1
+	fi
+
+	while IFS= read -r line; do
+		if [[ -n "${line}" ]]; then
+			ZONES_ARRAY+=("${line}")
+		fi
+	done <<<"${GCS_CONTENT}"
+	if [[ "${#ZONES_ARRAY[@]}" -eq 0 ]]; then
+		echo "ERROR: No valid zones found in ${OPTIONS_GCS_PATH}" >&2
+		exit 1
+	fi
+
+	PROVISIONING_MODELS=("SPOT")
+	if [[ "${ENABLE_SPOT_FALLBACK:-false}" == "true" ]]; then
+		PROVISIONING_MODELS+=("STANDARD")
+	fi
 fi
 
 SELECTED_ZONE=""
 SUCCESS=false
-
-declare -a PROVISIONING_MODELS=("SPOT")
-if [[ "${ENABLE_SPOT_FALLBACK:-false}" == "true" ]]; then
-	PROVISIONING_MODELS+=("STANDARD")
-fi
 
 FILESTORE_ZONES=""
 if [[ "${CHECK_FILESTORE:-false}" == "true" ]]; then
@@ -494,6 +509,12 @@ for PROVISIONING_MODEL in "${PROVISIONING_MODELS[@]}"; do
 		if ! check_cpu_quota "${REGION}"; then
 			echo "INFO: Skipping ${ZONE} - CPU quota check failed in region ${REGION}."
 			continue
+		fi
+
+		if [[ "${PROVISIONING_MODEL}" == "RESERVATION" ]]; then
+			SELECTED_ZONE="${ZONE}"
+			SUCCESS=true
+			break
 		fi
 
 		if [[ "${MACHINE_TYPE}" == "tpu" ]]; then

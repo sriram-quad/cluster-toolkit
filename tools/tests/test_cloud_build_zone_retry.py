@@ -944,9 +944,31 @@ class TestLustreAwareZoneRetry(unittest.TestCase):
         script = os.path.join(CLOUD_BUILD_DIR, "find_available_zone.sh")
         return subprocess.run(
             ["bash", "-c",
-             f'source "{script}" && echo "RESULT=$ZONE|$LUSTRE_ZONE"'],
+             f'source "{script}" && '
+             'echo "RESULT=$ZONE|$LUSTRE_ZONE|$PROVISIONING_MODEL"'],
             env=env, capture_output=True, text=True,
         )
+
+    def test_find_zone_reservation_skips_probe(self):
+        """Reserved capacity deploys even when every zone is stocked out."""
+        res = self._run_find_zone(
+            {
+                "TPU_RESERVATION_NAME": "ctk-v5p-daily",
+                "TPU_RESERVATION_ZONE": "us-central1-a",
+                "FAKE_TPU_OK_ZONES": "",
+                "LUSTRE_CROSS_ZONE": "true",
+                "LUSTRE_EXCLUDE_ZONES": "us-central1-a",
+            }
+        )
+        self.assertEqual(res.returncode, 0, msg=res.stdout + res.stderr)
+        self.assertIn("skipping capacity probe", res.stdout)
+        self.assertIn("RESULT=us-central1-a|us-central1-b|RESERVATION", res.stdout)
+        self.assertFalse(os.path.exists(os.path.join(self.test_dir, "tpu_state")))
+
+    def test_find_zone_reservation_requires_zone(self):
+        res = self._run_find_zone({"TPU_RESERVATION_NAME": "ctk-v5p-daily"})
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("TPU_RESERVATION_ZONE must be set", res.stderr)
 
     def test_find_zone_cross_zone_lustre_keeps_tpu_zone(self):
         """A Lustre stockout zone no longer discards the only TPU-capable zone."""

@@ -27,6 +27,10 @@ tags:
 substitutions:
   _PROVISIONING_MODEL: ""
   _TEST_PREFIX: ""
+  # Optional: name and zone of a TPU reservation. When set, the capacity
+  # probe is skipped and the cluster is deployed on reserved capacity.
+  _TPU_RESERVATION_NAME: ""
+  _TPU_RESERVATION_ZONE: ""
 
 timeout: 86400s
 queueTtl: 86400s
@@ -128,6 +132,10 @@ steps:
               value: "${_TEST_PREFIX}"
             - name: PROVISIONING_MODEL
               value: "$_PROVISIONING_MODEL"
+            - name: TPU_RESERVATION_NAME
+              value: "${_TPU_RESERVATION_NAME}"
+            - name: TPU_RESERVATION_ZONE
+              value: "${_TPU_RESERVATION_ZONE}"
             - name: GCLUSTER_GCS_PATH
               value: "$$GCLUSTER_GCS_PATH"
             - name: TRIAGE_GCS_BUCKET
@@ -184,8 +192,12 @@ steps:
               ENABLE_SPOT="true"
               SLURM_VARS_FILE="tools/cloud-build/daily-tests/tests/ml-tpu-v5p-onspot-slurm.yml"
 
-              if [[ "\$${PROVISIONING_MODEL:-}" == "STANDARD" ]]; then
+              if [[ "\$${PROVISIONING_MODEL:-}" == "STANDARD" || "\$${PROVISIONING_MODEL:-}" == "RESERVATION" ]]; then
                 ENABLE_SPOT="false"
+                if [[ "\$${PROVISIONING_MODEL}" == "RESERVATION" ]]; then
+                  echo "INFO: Deploying TPUs on reservation \$${TPU_RESERVATION_NAME}."
+                  sed -i "s/^  tpu_reservation_name:.*/  tpu_reservation_name: \$${TPU_RESERVATION_NAME}/" \$$BLUEPRINT
+                fi
                 sed -i 's/tpu_enable_spot_vm: true/tpu_enable_spot_vm: false/' \$$BLUEPRINT
                 sed -i '/instance_labels:/,+1d' "\$$SLURM_VARS_FILE"
                 sed -i '/enable_spot: true/d' "\$$SLURM_VARS_FILE"
