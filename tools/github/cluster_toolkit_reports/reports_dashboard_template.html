@@ -328,17 +328,6 @@
         <!-- Row 1: 4 Bento KPIs -->
         <div id="prKpis" class="grid grid-cols-2 lg:grid-cols-4 gap-5"></div>
 
-        <!-- Sub-Tab Bar -->
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div class="inline-flex flex-wrap p-1 rounded-xl gap-1" style="background-color: var(--bg-surface); border: 1px solid var(--border);">
-            <button type="button" data-prtab="tracker" onclick="switchPrTab('tracker')" class="pr-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">Stale PRs (14d+) <span id="prStaleBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]"></span></button>
-            <button type="button" data-prtab="newest" onclick="switchPrTab('newest')" class="pr-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">Newest (&lt; 14d) <span id="prNewestBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]"></span></button>
-            <button type="button" data-prtab="diff" onclick="switchPrTab('diff')" class="pr-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">Daily Changes <span id="prDiffBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]"></span></button>
-            <button type="button" data-prtab="reviewers" onclick="switchPrTab('reviewers')" class="pr-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">Action Queue (Reviewers &amp; Authors)</button>
-            <button type="button" data-prtab="chat" onclick="switchPrTab('chat')" class="pr-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">Chat Alert</button>
-          </div>
-        </div>
-
         <!-- Sub-View: PR Tracker -->
         <div id="prsub-tracker" class="space-y-5">
           <!-- Sticky-Header Triage Table with Avatars -->
@@ -429,13 +418,13 @@
           </div>
         </div>
 
-        <!-- Sub-View: Newest PRs (< 14 days open) -->
+        <!-- Sub-View: Current PRs (< 14 days open) -->
         <div id="prsub-newest" class="hidden space-y-4">
           <div class="bento-card overflow-hidden">
             <div class="px-5 py-3.5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-3" style="border-color: var(--border);">
               <div class="flex flex-wrap items-center gap-2.5">
                 <div>
-                  <h2 class="text-sm font-semibold" style="color: var(--text-primary);">Newest External &amp; Quadrant PRs (&lt; 14 Days)</h2>
+                  <h2 class="text-sm font-semibold" style="color: var(--text-primary);">Current External &amp; Quadrant PRs (&lt; 14 Days)</h2>
                   <p class="text-[11px]" style="color: var(--text-secondary);">Open non-draft PRs created within the last 14 days — click any row for full CI checks, reviews &amp; commits.</p>
                 </div>
               </div>
@@ -1797,7 +1786,7 @@
 
       // 3 Launch Cards
       const rCards = [
-        { id: 'stale_prs', title: 'External PRs', val: prs.length, pill: 'pill-blue', meta: `${prConf} merge conflicts · ${prs.filter(isWaitRev).length} awaiting review`, desc: 'Track open external & Quadrant PRs, newest (< 14d) PRs, reviewer queues, and PR comments.' },
+        { id: 'stale_prs', title: 'External PRs', val: prs.length, pill: 'pill-blue', meta: `${prConf} merge conflicts · ${prs.filter(isWaitRev).length} awaiting review`, desc: 'Track open external & Quadrant PRs, current (< 14d) PRs, reviewer queues, and PR comments.' },
         { id: 'code_scanning', title: 'Code Scanning Alerts', val: csA.length, pill: 'pill-med', meta: `${csHi} High · ${csA.length - csHi} Medium · ${CS.main_open_count} on main`, desc: 'Inspect every live GitHub CodeQL finding with rule IDs, CWE tags, and exact file lines.' },
         { id: 'vulnerabilities', title: 'Security Vulnerabilities', val: vA.length, pill: 'pill-high', meta: `${vCrit} Critical · ${vHi} High · ${(VULN.repo_advisories || []).length} repo advisory`, desc: 'Review each dependency vulnerability across PyPI & Go packages with fixed target versions.' }
       ];
@@ -2369,20 +2358,6 @@
       const activeRows = filterPrRowsByDate(getActiveStaleRows());
       const newestRows = getNewestRows();
       const res = sn.resolved_since_prev || [];
-      const chgN = allSnapRows.filter(r => r.daily_change === 'New' || r.daily_change === 'Status Updated').length + res.length;
-
-      const sb = document.getElementById('prStaleBadge');
-      sb.textContent = stale14Rows.length;
-      sb.className = 'ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold pill-blue';
-
-      const nb = document.getElementById('prNewestBadge');
-      nb.textContent = newestRows.length;
-      nb.className = 'ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold pill-green';
-
-      const db = document.getElementById('prDiffBadge');
-      db.textContent = chgN;
-      db.className = 'ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold pill-purple';
-
       const extN = activeRows.filter(r => r.contributor_type === 'External').length;
       const quadN = activeRows.length - extN;
       const newExtN = newestRows.filter(r => r.contributor_type === 'External').length;
@@ -2405,7 +2380,7 @@
             : (prev ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${delta > 0 ? 'pill-high' : 'pill-green'}">${delta >= 0 ? '+' + delta : delta}</span>` : ''),
           spark: trend, color: '#2563eb', active: st.prTab === 'tracker' && st.prKpi === 'all', onclick: "setPrKpi('all')"
         }),
-        bentoKpiHtml({ label: 'Newest PRs (< 14d)', val: newestRows.length, sub: `${newExtN} External · ${newQuadN} Quadrant`, delta: '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold pill-green">Newest →</span>', progress: Math.round((newestRows.length / Math.max(1, stale14Rows.length + newestRows.length)) * 100), color: '#10b981', active: st.prTab === 'newest', onclick: "setPrKpi('newest')" }),
+        bentoKpiHtml({ label: 'Current PRs (< 14d)', val: newestRows.length, sub: `${newExtN} External · ${newQuadN} Quadrant`, delta: '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold pill-green">Current →</span>', progress: Math.round((newestRows.length / Math.max(1, stale14Rows.length + newestRows.length)) * 100), color: '#10b981', active: st.prTab === 'newest', onclick: "setPrKpi('newest')" }),
         bentoKpiHtml({ label: 'Waiting on Reviewers', val: revN, sub: 'Review, re-review & 2nd LGTM', progress: Math.round((revN / Math.max(1, activeRows.length)) * 100), color: '#4f46e5', active: st.prTab === 'tracker' && st.prKpi === 'reviewer', onclick: "setPrKpi('reviewer')" }),
         bentoKpiHtml({ label: 'Author Action / Conflicts', val: blkN, sub: `${confN} with merge conflicts`, progress: Math.round((blkN / Math.max(1, activeRows.length)) * 100), color: confN ? '#e11d48' : '#d97706', active: st.prTab === 'tracker' && st.prKpi === 'author', onclick: "setPrKpi('author')" })
       ].join('');
@@ -2470,7 +2445,7 @@
       const own = parseOwner(r.waiting_on);
       const cStats = getPrCommentStats(r.number);
       const chg = showNewestPill
-        ? '<span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold pill-green">NEWEST</span>'
+        ? '<span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold pill-green">CURRENT</span>'
         : (r.daily_change === 'New' ? '<span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold pill-purple">NEW</span>'
           : (r.daily_change === 'Status Updated' ? '<span class="ml-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold pill-blue">UPD</span>' : ''));
       const idleStyle = (r.days_inactive || 0) >= 10 ? 'color:#e11d48;font-weight:600;' : ((r.days_inactive || 0) >= 5 ? 'color:#d97706;' : 'color:var(--text-secondary);');
@@ -2694,7 +2669,7 @@
         st.queueScope, "st.queueScope='__K__'; renderPrReviewers()"
       );
       document.getElementById('queueAgeSeg').innerHTML = segHtml(
-        [['all', 'All Open'], ['stale14', 'Stale 14d+'], ['newest', 'Newest <14d']],
+        [['all', 'All Open'], ['stale14', 'Stale 14d+'], ['newest', 'Current <14d']],
         st.queueAge, "st.queueAge='__K__'; renderPrReviewers()"
       );
 
