@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Stale External PRs Dashboard — cluster-toolkit</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --app-background: #f8fafc;
+      --app-foreground: #0f172a;
+      --app-card: #ffffff;
+      --app-card-foreground: #0f172a;
+      --app-card-border: #e2e8f0;
+      --app-border: #e2e8f0;
+      --app-primary: #1d4ed8;
+      --app-primary-foreground: #ffffff;
+      --app-muted: #f1f5f9;
+      --app-muted-foreground: #475569;
+      --vscode-font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    html.dark {
+      --app-background: #0b1120;
+      --app-foreground: #f1f5f9;
+      --app-card: #111827;
+      --app-card-foreground: #f1f5f9;
+      --app-card-border: #1f2937;
+      --app-border: #1f2937;
+      --app-primary: #3b82f6;
+      --app-primary-foreground: #ffffff;
+      --app-muted: #1e293b;
+      --app-muted-foreground: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[var(--app-background)] text-[var(--app-foreground)] font-[var(--vscode-font-family)] antialiased min-h-screen">
+  <div class="max-w-[1440px] mx-auto px-4 sm:px-6 py-5 space-y-5">
+
+    <!-- Top Header -->
+    <header class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl p-4 sm:p-5 shadow-sm">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex flex-wrap items-center gap-2.5">
+            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-[var(--app-foreground)]">
+              Stale External PRs Dashboard
+            </h1>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Mon–Fri 5:00 PM IST Auto-Sync
+            </span>
+          </div>
+          <p id="headerSubtitle" class="text-xs sm:text-sm text-[var(--app-muted-foreground)]"></p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <div class="inline-flex items-center gap-2 bg-[var(--app-muted)] border border-[var(--app-border)] rounded-lg px-2.5 py-1">
+            <span class="text-[11px] font-medium text-[var(--app-muted-foreground)]">Report Date:</span>
+            <select id="dateSelect" onchange="onDateChange(this.value)"
+              class="bg-transparent text-xs font-semibold text-[var(--app-foreground)] focus:outline-none cursor-pointer pr-1">
+            </select>
+          </div>
+          <button type="button" id="themeToggleBtn" onclick="toggleTheme()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--app-muted)] text-[var(--app-foreground)] border border-[var(--app-border)] hover:opacity-85 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/>
+            </svg>
+            <span>Theme</span>
+          </button>
+          <a href="./stale_pr_master_tracker.xlsx?v=1795779069" download="stale_pr_master_tracker.xlsx"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--app-muted)] text-[var(--app-foreground)] border border-[var(--app-border)] hover:opacity-85 transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            <span>Download .xlsx</span>
+          </a>
+          <a href="https://docs.google.com/spreadsheets/d/1IVGCOCGo1IyJ19d5W2NvLDGICIDdweOv/edit?usp=drivesdk&ouid=114132250865318787301&rtpof=true&sd=true" target="_blank" rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--app-primary)] text-[var(--app-primary-foreground)] hover:opacity-90 transition shadow-sm">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+            </svg>
+            <span>Open Shared Excel Sheet</span>
+            <svg class="w-3 h-3 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M7 17L17 7M7 7h10v10"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="mt-4 pt-3 border-t border-[var(--app-border)] flex flex-wrap items-center gap-1.5" id="navTabs">
+        <button type="button" data-tab="overview" onclick="switchTab('overview')"
+          class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">
+          Overview &amp; PR Tracker
+        </button>
+        <button type="button" data-tab="diff" onclick="switchTab('diff')"
+          class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">
+          Day-over-Day Changes <span id="diffBadge" class="ml-1 px-1.5 py-0.5 rounded-full text-[10px]"></span>
+        </button>
+        <button type="button" data-tab="reviewers" onclick="switchTab('reviewers')"
+          class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">
+          Reviewer Queue
+        </button>
+        <button type="button" data-tab="chat" onclick="switchTab('chat')"
+          class="nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">
+          Daily Chat Alert
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Cards (Click to filter) -->
+    <section id="kpiGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3"></section>
+
+    <!-- TAB 1: Overview & PR Table -->
+    <div id="tab-overview" class="space-y-5">
+      <!-- Charts Row -->
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Donut Chart: Status Category -->
+        <div class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl p-4 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-[var(--app-muted-foreground)]">Status Breakdown</h2>
+            <span class="text-[11px] text-[var(--app-muted-foreground)]">Click to filter</span>
+          </div>
+          <div id="categoryChart" class="flex-1 flex items-center gap-4"></div>
+        </div>
+
+        <!-- Bar Chart: Daily Trend -->
+        <div class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl p-4 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-[var(--app-muted-foreground)]">Daily Stale PR Trend</h2>
+            <div class="flex items-center gap-2.5 text-[10px] text-[var(--app-muted-foreground)]">
+              <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-blue-500"></span>External</span>
+              <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-indigo-400"></span>Quadrant</span>
+              <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500"></span>Conflicts</span>
+            </div>
+          </div>
+          <div id="trendChart" class="flex-1 flex items-end min-h-[150px]"></div>
+        </div>
+
+        <!-- Horizontal Bar: Reviewer Queue -->
+        <div class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl p-4 shadow-sm flex flex-col">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-[var(--app-muted-foreground)]">Top Pending Reviewers</h2>
+            <span class="text-[11px] text-[var(--app-muted-foreground)]">Click reviewer to filter</span>
+          </div>
+          <div id="reviewerMiniChart" class="flex-1 space-y-2"></div>
+        </div>
+      </section>
+
+      <!-- Filter Bar + PR Table -->
+      <section class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-[var(--app-border)] space-y-3">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div role="search" class="relative flex-1 max-w-md">
+              <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--app-muted-foreground)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input id="searchInput" type="text" oninput="applyFilters()"
+                placeholder="Search PR #, title, author, reviewer, or status..."
+                class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg bg-[var(--app-muted)] text-[var(--app-foreground)] border border-[var(--app-border)] placeholder:text-[var(--app-muted-foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--app-primary)]">
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <select id="typeFilter" onchange="applyFilters()"
+                class="px-2.5 py-1.5 text-xs rounded-lg bg-[var(--app-muted)] text-[var(--app-foreground)] border border-[var(--app-border)] cursor-pointer">
+                <option value="all">All (External + Quadrant)</option>
+                <option value="External">External Only</option>
+                <option value="Quadrant (-quad)">Quadrant (-quad) Only</option>
+              </select>
+
+              <select id="sortSelect" onchange="applyFilters()"
+                class="px-2.5 py-1.5 text-xs rounded-lg bg-[var(--app-muted)] text-[var(--app-foreground)] border border-[var(--app-border)] cursor-pointer">
+                <option value="number_asc">Sort: PR # (Oldest ID)</option>
+                <option value="days_open_desc">Sort: Days Open (Highest)</option>
+                <option value="inactive_desc">Sort: Days Inactive (Highest)</option>
+                <option value="updated_first">Sort: Updated Today First</option>
+                <option value="conflicts_first">Sort: Merge Conflicts First</option>
+              </select>
+
+              <button type="button" id="resetFiltersBtn" onclick="resetFilters()"
+                class="hidden px-2.5 py-1.5 text-xs font-medium rounded-lg bg-rose-500/15 text-rose-600 border border-rose-500/30 hover:opacity-85">
+                Clear Filters
+              </button>
+
+              <span id="resultCounter" class="text-xs font-medium text-[var(--app-muted-foreground)] pl-1"></span>
+            </div>
+          </div>
+
+          <div id="activeFilterPills" class="flex flex-wrap items-center gap-1.5"></div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-[var(--app-muted)] text-[11px] font-semibold uppercase tracking-wider text-[var(--app-muted-foreground)] border-b border-[var(--app-border)]">
+                <th class="py-2.5 px-3 w-24">PR</th>
+                <th class="py-2.5 px-3 min-w-[240px]">Title &amp; Author</th>
+                <th class="py-2.5 px-3 w-36">Timeline</th>
+                <th class="py-2.5 px-3 w-44">Category</th>
+                <th class="py-2.5 px-3 w-48">Next Action Owner</th>
+                <th class="py-2.5 px-3 min-w-[300px]">Status Summary</th>
+              </tr>
+            </thead>
+            <tbody id="prTableBody" class="divide-y divide-[var(--app-border)] text-xs"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 2: Day-over-Day Diff -->
+    <div id="tab-diff" class="hidden space-y-4">
+      <div class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl p-4 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 id="diffTitle" class="text-sm font-bold text-[var(--app-foreground)]"></h2>
+            <p class="text-xs text-[var(--app-muted-foreground)]">Side-by-side status comparison against the previous tracked report day.</p>
+          </div>
+          <div id="diffFilterBar" class="flex flex-wrap gap-1.5"></div>
+        </div>
+        <div id="diffList" class="space-y-2.5"></div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Reviewer Queue -->
+    <div id="tab-reviewers" class="hidden">
+      <div id="reviewerCardsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </div>
+
+    <!-- TAB 4: Daily Chat Alert -->
+    <div id="tab-chat" class="hidden">
+      <div class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-bold text-[var(--app-foreground)]">Formatted Google Chat Alert Message</h2>
+            <p class="text-xs text-[var(--app-muted-foreground)]">Ready to share directly in your team's Google Chat space.</p>
+          </div>
+          <button type="button" id="copyChatBtn" onclick="copyChatText()"
+            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-[var(--app-primary)] text-[var(--app-primary-foreground)] hover:opacity-90 transition">
+            <span id="copyChatLabel">Copy Chat Report</span>
+          </button>
+        </div>
+        <textarea id="chatTextarea" readonly rows="22"
+          class="w-full p-3.5 rounded-lg text-xs font-mono leading-relaxed bg-[var(--app-muted)] text-[var(--app-foreground)] border border-[var(--app-border)] focus:outline-none"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const DATA = {"sheetUrl": "https://docs.google.com/spreadsheets/d/1IVGCOCGo1IyJ19d5W2NvLDGICIDdweOv/edit?usp=drivesdk&ouid=114132250865318787301&rtpof=true&sd=true", "snapshots": [{"date": "2026-11-19", "day_name": "Thu", "generated_at": "Nov 19, 2026 05:51 PM IST", "source": "Team Baseline Report", "repo": "GoogleCloudPlatform/cluster-toolkit", "total_open_prs": null, "resolved_since_prev": [], "rows": [{"number": 6493, "pr_id": "#6493", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6493", "daily_change": "Baseline", "title": "docs(ofe): correct inaccuracies and stale content in OFE documentation", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, documentation, release-chore", "created_on": "Oct 15, 2026", "last_action_on": "Nov 10, 2026", "days_open": 35, "days_inactive": 9, "diff_summary": "-", "merge_ci_state": "Changes Requested", "category": "Changes Requested", "waiting_on": "Author (@ek-nag)", "approvals": "@Vivek Vikram Singh", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Vivek Vikram Singh"], "conflicts": "No", "status": "Reviewer @Adarsh Kullachi has requested changes and is awaiting a response from the author. The PR has already received one approval from @Vivek Vikram Singh."}, {"number": 6495, "pr_id": "#6495", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6495", "daily_change": "Baseline", "title": "feat(cloudsql): add a general-purpose Cloud SQL database module", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-new-modules", "created_on": "Oct 15, 2026", "last_action_on": "Nov 16, 2026", "days_open": 35, "days_inactive": 3, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Vivek Vikram Singh", "approvals": "@Adarsh Kullachi", "changes_requested": "-", "pending_reviewers": "@Vivek Vikram Singh", "pending_list": ["@Vivek Vikram Singh"], "changes_req_list": [], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi and is awaiting a second review and approval from @Vivek Vikram Singh."}, {"number": 6499, "pr_id": "#6499", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6499", "daily_change": "Baseline", "title": "feat(modules): add instructions community module", "author": "jacobw125", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-new-modules", "created_on": "Oct 15, 2026", "last_action_on": "Nov 10, 2026", "days_open": 35, "days_inactive": 9, "diff_summary": "-", "merge_ci_state": "Changes Requested", "category": "Changes Requested", "waiting_on": "Author (@jacobw125)", "approvals": "-", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": [], "conflicts": "No", "status": "Reviewer @Adarsh Kullachi has requested changes and is awaiting a response from the author."}, {"number": 6529, "pr_id": "#6529", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6529", "daily_change": "Baseline", "title": "feat(security/lldap-server): LLDAP directory module with SSSD client for Slurm v6", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Oct 20, 2026", "last_action_on": "Oct 20, 2026", "days_open": 30, "days_inactive": 30, "diff_summary": "-", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag) & Reviewers", "approvals": "-", "changes_requested": "Gemini suggestions", "pending_reviewers": "Pending Review", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "There are Gemini suggestions regarding the changes, as well as some conflicts that need to be verified, currently awaiting review and an update from the author."}, {"number": 6550, "pr_id": "#6550", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6550", "daily_change": "Baseline", "title": "fix(ofe): config-mode region and parser, teardown -y and small script", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-bugfix", "created_on": "Oct 23, 2026", "last_action_on": "Nov 14, 2026 (5 days ago)", "days_open": 27, "days_inactive": 5, "diff_summary": "-", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ep-nag)", "approvals": "-", "changes_requested": "@Ishita Chail", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Ishita Chail"], "approved_list": [], "conflicts": "Yes", "status": "Reviewer @Ishita Chail has requested changes and is awaiting a response from the author and additionally, there are some conflicts that need to be verified."}, {"number": 6577, "pr_id": "#6577", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6577", "daily_change": "Baseline", "title": "feat(ofe): ofe cluster toolkit cmek module integration", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-improvements", "created_on": "Oct 27, 2026", "last_action_on": "Nov 09, 2026", "days_open": 23, "days_inactive": 10, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewers: @Arpit Agarwal and @Vivek Vikram Singh", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Vivek Vikram Singh", "pending_list": ["@Arpit Agarwal", "@Vivek Vikram Singh"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed the changes, awaiting for @Arpit Agarwal and @Vivek Vikram Singh to review the changes."}, {"number": 6578, "pr_id": "#6578", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6578", "daily_change": "Baseline", "title": "Update CAE Slurm blueprint with H4D RDMA, C4D-highmem, G4 GPUs, and Managed Lustre", "author": "jrossthomson", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-improvements", "created_on": "Oct 09, 2026", "last_action_on": "Nov 16, 2026", "days_open": 41, "days_inactive": 3, "diff_summary": "-", "merge_ci_state": "Needs Rebase", "category": "Changes Requested", "waiting_on": "Author (@jrossthomson)", "approvals": "-", "changes_requested": "Rebase & pre-commits requested", "pending_reviewers": "-", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "Awaiting the author to rebase onto the latest develop branch and re-run the pre-commits."}, {"number": 6632, "pr_id": "#6632", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6632", "daily_change": "Baseline", "title": "feat(iap): add external app load balancer, backend service, and managed certificate modules- #202", "author": "scott-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Nov 03, 2026", "last_action_on": "Nov 17, 2026", "days_open": 16, "days_inactive": 2, "diff_summary": "-", "merge_ci_state": "Changes Requested", "category": "Changes Requested", "waiting_on": "Author (@scott-nag)", "approvals": "-", "changes_requested": "@Arpit Agarwal", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Arpit Agarwal"], "approved_list": [], "conflicts": "No", "status": "Reviewer @Arpit Agarwal has requested changes and is awaiting an author to address them."}]}, {"date": "2026-11-20", "day_name": "Fri", "generated_at": "Nov 20, 2026 05:49 PM IST", "source": "Team Baseline Report", "repo": "GoogleCloudPlatform/cluster-toolkit", "total_open_prs": null, "resolved_since_prev": [], "rows": [{"number": 6429, "pr_id": "#6429", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6429", "daily_change": "New", "title": "update Slurm login metadata in place", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Oct 07, 2026", "last_action_on": "Nov 16, 2026", "days_open": 44, "days_inactive": 4, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed the changes, awaiting for @Arpit Agarwal to review the changes."}, {"number": 6493, "pr_id": "#6493", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6493", "daily_change": "Unchanged", "title": "docs(ofe): correct inaccuracies and stale content in OFE documentation", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, documentation, release-chore", "created_on": "Oct 15, 2026", "last_action_on": "Nov 10, 2026", "days_open": 36, "days_inactive": 10, "diff_summary": "-", "merge_ci_state": "Changes Requested", "category": "Changes Requested", "waiting_on": "Author (@ek-nag)", "approvals": "@Vivek Vikram Singh", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Vivek Vikram Singh"], "conflicts": "No", "status": "Reviewer @Adarsh Kullachi has requested changes and is awaiting a response from the author. The PR has already received one approval from @Vivek Vikram Singh."}, {"number": 6495, "pr_id": "#6495", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6495", "daily_change": "Status Updated", "title": "feat(cloudsql): add a general-purpose Cloud SQL database module", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-new-modules", "created_on": "Oct 15, 2026", "last_action_on": "Nov 19, 2026", "days_open": 36, "days_inactive": 1, "diff_summary": "-", "merge_ci_state": "Changes Requested", "category": "Changes Requested", "waiting_on": "Author (@ep-nag)", "approvals": "@Adarsh Kullachi", "changes_requested": "@Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Vivek Vikram Singh"], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi, while @Vivek Vikram Singh has requested changes and is awaiting a response from the author."}, {"number": 6499, "pr_id": "#6499", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6499", "daily_change": "Status Updated", "title": "feat(modules): add instructions community module", "author": "jacobw125", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-new-modules", "created_on": "Oct 15, 2026", "last_action_on": "Nov 19, 2026", "days_open": 36, "days_inactive": 1, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewers: @Adarsh Kullachi and @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi, @Arpit Agarwal", "pending_list": ["@Adarsh Kullachi", "@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed the changes, awaiting for @Adarsh Kullachi and @Arpit Agarwal to re-review the changes."}, {"number": 6529, "pr_id": "#6529", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6529", "daily_change": "Unchanged", "title": "feat(security/lldap-server): LLDAP directory module with SSSD client for Slurm v6", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Oct 20, 2026", "last_action_on": "Oct 20, 2026", "days_open": 31, "days_inactive": 31, "diff_summary": "-", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag) & Reviewers", "approvals": "-", "changes_requested": "Gemini suggestions", "pending_reviewers": "Pending Review", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "There are Gemini suggestions regarding the changes, as well as some conflicts that need to be verified, currently awaiting review and an update from the author."}, {"number": 6533, "pr_id": "#6533", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6533", "daily_change": "New", "title": "Fix stuck jobs when machines are out of stock", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external, release-chore", "created_on": "Oct 20, 2026", "last_action_on": "Nov 17, 2026", "days_open": 31, "days_inactive": 3, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewers: @Adarsh Kullachi and @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi, @Arpit Agarwal", "pending_list": ["@Adarsh Kullachi", "@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed the changes, awaiting for @Adarsh Kullachi and @Arpit Agarwal to review the changes."}, {"number": 6550, "pr_id": "#6550", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6550", "daily_change": "Status Updated", "title": "fix(ofe): config-mode region and parser, teardown -y and small script", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-bugfix", "created_on": "Oct 23, 2026", "last_action_on": "Nov 19, 2026", "days_open": 28, "days_inactive": 1, "diff_summary": "-", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ep-nag)", "approvals": "-", "changes_requested": "@Ishita Chail, @Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Ishita Chail", "@Vivek Vikram Singh"], "approved_list": [], "conflicts": "Yes", "status": "Reviewers @Ishita Chail and @Vivek Vikram Singh have requested changes and are awaiting a response from the author and additionally, there are some conflicts that need to be verified."}, {"number": 6563, "pr_id": "#6563", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6563", "daily_change": "New", "title": "Fix [CI/Kueue]: Kueue test locks remain held after Cloud Builds are cancelled via the UI.", "author": "deepakrajk-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external, release-chore", "created_on": "Oct 26, 2026", "last_action_on": "Nov 20, 2026", "days_open": 25, "days_inactive": 0, "diff_summary": "-", "merge_ci_state": "Changes Requested", "category": "Changes Requested", "waiting_on": "Author (@deepakrajk-quad)", "approvals": "-", "changes_requested": "@Neelabh Goyal", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Neelabh Goyal"], "approved_list": [], "conflicts": "No", "status": "The reviewer @Neelabh Goyal has suggested the changes and is awaiting a response from the author."}, {"number": 6569, "pr_id": "#6569", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6569", "daily_change": "New", "title": "Fix silent test failure by adding post_deploy_tests to ml-slurm", "author": "sriram-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external, release-chore", "created_on": "Oct 26, 2026", "last_action_on": "Nov 18, 2026", "days_open": 25, "days_inactive": 2, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Saara Tyagi", "approvals": "@Shubham Pal", "changes_requested": "-", "pending_reviewers": "@Saara Tyagi", "pending_list": ["@Saara Tyagi"], "changes_req_list": [], "approved_list": ["@Shubham Pal"], "conflicts": "No", "status": "The PR has received one approval from @Shubham Pal and is awaiting a second review and approval from @Saara Tyagi."}, {"number": 6577, "pr_id": "#6577", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6577", "daily_change": "Unchanged", "title": "feat(ofe): ofe cluster toolkit cmek module integration", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-improvements", "created_on": "Oct 27, 2026", "last_action_on": "Nov 09, 2026", "days_open": 24, "days_inactive": 11, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewers: @Arpit Agarwal and @Vivek Vikram Singh", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Vivek Vikram Singh", "pending_list": ["@Arpit Agarwal", "@Vivek Vikram Singh"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed the changes, awaiting for @Arpit Agarwal and @Vivek Vikram Singh to review the changes."}, {"number": 6578, "pr_id": "#6578", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6578", "daily_change": "Status Updated", "title": "Update CAE Slurm blueprint with H4D RDMA, C4D-highmem, G4 GPUs, and Managed Lustre", "author": "jrossthomson", "contributor_type": "External", "base_branch": "develop", "labels": "external, release-improvements", "created_on": "Oct 09, 2026", "last_action_on": "Nov 18, 2026", "days_open": 42, "days_inactive": 2, "diff_summary": "-", "merge_ci_state": "Needs Rebase", "category": "Changes Requested", "waiting_on": "Author (@jrossthomson)", "approvals": "-", "changes_requested": "Rebase & pre-commits requested", "pending_reviewers": "-", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "Awaiting the author to rebase onto the latest develop branch and re-run the pre-commits."}, {"number": 6632, "pr_id": "#6632", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6632", "daily_change": "Unchanged", "title": "feat(iap): add external app load balancer, backend service, and managed certificate modules", "author": "scott-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Nov 03, 2026", "last_action_on": "Nov 17, 2026", "days_open": 17, "days_inactive": 3, "diff_summary": "-", "merge_ci_state": "Changes Requested", "category": "Changes Requested", "waiting_on": "Author (@scott-nag)", "approvals": "-", "changes_requested": "@Arpit Agarwal", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Arpit Agarwal"], "approved_list": [], "conflicts": "No", "status": "Reviewer @Arpit Agarwal has requested changes and is awaiting an author to address them."}, {"number": 6671, "pr_id": "#6671", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6671", "daily_change": "New", "title": "enable non-root NVIDIA GPU profiling on GPU blueprints", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Nov 13, 2026", "last_action_on": "Nov 20, 2026", "days_open": 7, "days_inactive": 0, "diff_summary": "-", "merge_ci_state": "Review Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author recently addressed a review comment from @Adarsh Kullachi and force-pushed a new commit."}]}, {"date": "2026-11-23", "day_name": "Mon", "generated_at": "Nov 23, 2026 07:13 PM IST", "generated_epoch": 1795441465, "source": "Automated GitHub Fetch (5 PM Bot)", "repo": "GoogleCloudPlatform/cluster-toolkit", "total_open_prs": 49, "resolved_since_prev": [{"number": 6569, "pr_id": "#6569", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6569", "title": "Fix silent test failure by adding post_deploy_tests to ml-slurm", "author": "sriram-quad", "change_type": "Merged", "prev_last_action": "Nov 18, 2026", "curr_last_action": "Nov 23, 2026", "waiting_on": "Done", "prev_status": "The PR has received one approval from @Shubham Pal and is awaiting a second review and approval from @Saara Tyagi.", "curr_status": "PR was merged by @sriram-quad on Nov 23, 2026."}], "rows": [{"number": 6429, "pr_id": "#6429", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6429", "daily_change": "Unchanged", "title": "update Slurm login metadata in place", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Oct 07, 2026", "created_iso": "2026-10-07", "last_action_on": "Nov 16, 2026", "last_action_iso": "2026-11-16", "days_open": 47, "days_inactive": 7, "diff_summary": "5c | 13f (+40/-2)", "merge_ci_state": "Checking / Unknown", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6493, "pr_id": "#6493", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6493", "daily_change": "Unchanged", "title": "docs(ofe): correct inaccuracies and stale content in OFE documentation", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "documentation, release-chore, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 10, 2026", "last_action_iso": "2026-11-10", "days_open": 39, "days_inactive": 13, "diff_summary": "6c | 13f (+636/-305)", "merge_ci_state": "Checking / Unknown", "category": "Changes Requested", "waiting_on": "Author (@ek-nag)", "approvals": "@Vivek Vikram Singh", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Vivek Vikram Singh"], "conflicts": "No", "status": "The PR has received one approval from @Vivek Vikram Singh, while @Adarsh Kullachi has requested changes and is awaiting a response from the author."}, {"number": 6495, "pr_id": "#6495", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6495", "daily_change": "Unchanged", "title": "feat(cloudsql): add a general-purpose Cloud SQL database module", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 19, 2026", "last_action_iso": "2026-11-19", "days_open": 39, "days_inactive": 4, "diff_summary": "10c | 25f (+2553/-6)", "merge_ci_state": "Checking / Unknown", "category": "Changes Requested", "waiting_on": "Author (@ep-nag)", "approvals": "@Adarsh Kullachi", "changes_requested": "@Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Vivek Vikram Singh"], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi, while @Vivek Vikram Singh has left review comments and is awaiting a response from the author."}, {"number": 6499, "pr_id": "#6499", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6499", "daily_change": "Status Updated", "title": "feat(modules): add instructions community module", "author": "jacobw125", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 39, "days_inactive": 3, "diff_summary": "4c | 15f (+429/-0)", "merge_ci_state": "Checking / Unknown", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "@Adarsh Kullachi", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi and is awaiting a second review and approval from @Arpit Agarwal."}, {"number": 6529, "pr_id": "#6529", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6529", "daily_change": "Status Updated", "title": "feat(security/lldap-server): add LLDAP directory module with SSSD cli…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 09, 2026", "last_action_iso": "2026-11-09", "days_open": 34, "days_inactive": 14, "diff_summary": "1c | 18f (+3604/-1)", "merge_ci_state": "Checking / Unknown", "category": "Awaiting Review", "waiting_on": "Reviewer: @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "There are Gemini suggestions on the changes; currently awaiting review from @Arpit Agarwal and @Adarsh Kullachi."}, {"number": 6533, "pr_id": "#6533", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6533", "daily_change": "Status Updated", "title": "Fix stuck jobs when machines are out of stock", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 34, "days_inactive": 0, "diff_summary": "7c | 13f (+2618/-12)", "merge_ci_state": "Checking / Unknown", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal and @Adarsh Kullachi to review the changes."}, {"number": 6550, "pr_id": "#6550", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6550", "daily_change": "Status Updated", "title": "fix(ofe): config-mode region and parser, teardown -y and small script…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-bugfix, external", "created_on": "Oct 23, 2026", "created_iso": "2026-10-23", "last_action_on": "Nov 19, 2026", "last_action_iso": "2026-11-19", "days_open": 31, "days_inactive": 4, "diff_summary": "4c | 3f (+56/-16)", "merge_ci_state": "Checking / Unknown", "category": "Changes Requested", "waiting_on": "Author (@ek-nag)", "approvals": "-", "changes_requested": "@Ishita Chail, @Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Ishita Chail", "@Vivek Vikram Singh"], "approved_list": [], "conflicts": "No", "status": "Reviewers @Ishita Chail and @Vivek Vikram Singh have left review comments and are awaiting a response from the author."}, {"number": 6563, "pr_id": "#6563", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6563", "daily_change": "Status Updated", "title": "Fix [CI/Kueue]: Kueue test locks remain held after Cloud Builds are cancelled via the UI.", "author": "deepakrajk-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 26, 2026", "created_iso": "2026-10-26", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 28, "days_inactive": 0, "diff_summary": "3c | 77f (+751/-396)", "merge_ci_state": "Checking / Unknown", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Saara Tyagi", "approvals": "@Neelabh Goyal", "changes_requested": "-", "pending_reviewers": "@Saara Tyagi", "pending_list": ["@Saara Tyagi"], "changes_req_list": [], "approved_list": ["@Neelabh Goyal"], "conflicts": "No", "status": "The PR has received one approval from @Neelabh Goyal and is awaiting a second review and approval from @Saara Tyagi."}, {"number": 6577, "pr_id": "#6577", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6577", "daily_change": "Status Updated", "title": "feat(ofe): ofe cluster toolkit cmek module integration", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 27, 2026", "created_iso": "2026-10-27", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 27, "days_inactive": 3, "diff_summary": "3c | 68f (+12656/-173)", "merge_ci_state": "Review / Checks Required", "category": "Changes Requested", "waiting_on": "Author (@ep-nag)", "approvals": "-", "changes_requested": "@Vivek Vikram Singh", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": ["@Vivek Vikram Singh"], "approved_list": [], "conflicts": "No", "status": "Reviewer @Vivek Vikram Singh has left review comments and is awaiting a response from the author. Also pending review from @Arpit Agarwal."}, {"number": 6578, "pr_id": "#6578", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6578", "daily_change": "Status Updated", "title": "Update CAE Slurm blueprint with H4D RDMA, C4D-highmem, G4 GPUs, and Managed Lustre", "author": "jrossthomson", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 28, 2026", "created_iso": "2026-10-28", "last_action_on": "Nov 22, 2026", "last_action_iso": "2026-11-22", "days_open": 26, "days_inactive": 1, "diff_summary": "11c | 9f (+548/-134)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal and @agrawalkhushi18", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @agrawalkhushi18", "pending_list": ["@Arpit Agarwal", "@agrawalkhushi18"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal and @agrawalkhushi18 to review the changes."}, {"number": 6632, "pr_id": "#6632", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6632", "daily_change": "Status Updated", "title": "feat(iap): add external app load balancer, backend service, and managed certificate modules- #202", "author": "scott-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Nov 04, 2026", "created_iso": "2026-11-04", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 19, "days_inactive": 0, "diff_summary": "8c | 52f (+2504/-17)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@scott-nag)", "approvals": "-", "changes_requested": "@Arpit Agarwal", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": ["@Arpit Agarwal"], "approved_list": [], "conflicts": "Yes", "status": "Reviewer @Arpit Agarwal has requested changes and is awaiting a response from the author. Also pending review from @Adarsh Kullachi. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6671, "pr_id": "#6671", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6671", "daily_change": "Unchanged", "title": "enable non-root NVIDIA GPU profiling on GPU blueprints", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Nov 13, 2026", "created_iso": "2026-11-13", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 10, "days_inactive": 3, "diff_summary": "1c | 9f (+45/-0)", "merge_ci_state": "Checking / Unknown", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Adarsh Kullachi to review the changes."}]}, {"date": "2026-11-24", "day_name": "Tue", "generated_at": "Nov 24, 2026 07:25 PM IST", "generated_epoch": 1795528556, "source": "Automated GitHub Fetch (5 PM Bot)", "repo": "GoogleCloudPlatform/cluster-toolkit", "total_open_prs": 47, "resolved_since_prev": [], "rows": [{"number": 6429, "pr_id": "#6429", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6429", "daily_change": "Unchanged", "title": "update Slurm login metadata in place", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Oct 07, 2026", "created_iso": "2026-10-07", "last_action_on": "Nov 16, 2026", "last_action_iso": "2026-11-16", "days_open": 48, "days_inactive": 8, "diff_summary": "5c | 13f (+40/-2)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6493, "pr_id": "#6493", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6493", "daily_change": "Status Updated", "title": "docs(ofe): correct inaccuracies and stale content in OFE documentation", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "documentation, release-chore, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 10, 2026", "last_action_iso": "2026-11-10", "days_open": 40, "days_inactive": 14, "diff_summary": "6c | 13f (+636/-305)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "@Vivek Vikram Singh", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Vivek Vikram Singh"], "conflicts": "Yes", "status": "The PR has received one approval from @Vivek Vikram Singh, while @Adarsh Kullachi has requested changes and is awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6495, "pr_id": "#6495", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6495", "daily_change": "Status Updated", "title": "feat(cloudsql): add a general-purpose Cloud SQL database module", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 40, "days_inactive": 1, "diff_summary": "12c | 25f (+2593/-6)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Vivek Vikram Singh", "approvals": "-", "changes_requested": "-", "pending_reviewers": "-", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author recently pushed updated commits addressing feedback from @Vivek Vikram Singh; awaiting re-review."}, {"number": 6499, "pr_id": "#6499", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6499", "daily_change": "Unchanged", "title": "feat(modules): add instructions community module", "author": "jacobw125", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 40, "days_inactive": 4, "diff_summary": "4c | 15f (+429/-0)", "merge_ci_state": "Review / Checks Required", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "@Adarsh Kullachi", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi and is awaiting a second review and approval from @Arpit Agarwal."}, {"number": 6529, "pr_id": "#6529", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6529", "daily_change": "Status Updated", "title": "feat(security/lldap-server): add LLDAP directory module with SSSD cli…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 09, 2026", "last_action_iso": "2026-11-09", "days_open": 35, "days_inactive": 15, "diff_summary": "1c | 18f (+3604/-1)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag) & @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "There are Gemini suggestions and merge conflicts to verify; currently awaiting review from @Arpit Agarwal and @Adarsh Kullachi and an update from the author."}, {"number": 6533, "pr_id": "#6533", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6533", "daily_change": "Status Updated", "title": "Fix stuck jobs when machines are out of stock", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 35, "days_inactive": 1, "diff_summary": "7c | 13f (+2618/-12)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@siddhartha-quad) & @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "The author has committed updated changes; awaiting @Arpit Agarwal and @Adarsh Kullachi to review the changes. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6550, "pr_id": "#6550", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6550", "daily_change": "Status Updated", "title": "fix(ofe): config-mode region and parser, teardown -y and small script…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-bugfix, external", "created_on": "Oct 23, 2026", "created_iso": "2026-10-23", "last_action_on": "Nov 19, 2026", "last_action_iso": "2026-11-19", "days_open": 32, "days_inactive": 5, "diff_summary": "4c | 3f (+56/-16)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "-", "changes_requested": "@Ishita Chail, @Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Ishita Chail", "@Vivek Vikram Singh"], "approved_list": [], "conflicts": "Yes", "status": "Reviewers @Ishita Chail and @Vivek Vikram Singh have left review comments and are awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6563, "pr_id": "#6563", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6563", "daily_change": "Status Updated", "title": "Fix [CI/Kueue]: Kueue test locks remain held after Cloud Builds are cancelled via the UI.", "author": "deepakrajk-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 26, 2026", "created_iso": "2026-10-26", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 29, "days_inactive": 1, "diff_summary": "3c | 77f (+751/-396)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Reviewer: @Saara Tyagi", "approvals": "@Neelabh Goyal", "changes_requested": "-", "pending_reviewers": "@Saara Tyagi", "pending_list": ["@Saara Tyagi"], "changes_req_list": [], "approved_list": ["@Neelabh Goyal"], "conflicts": "Yes", "status": "The PR has received one approval from @Neelabh Goyal and is awaiting a second review and approval from @Saara Tyagi. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6577, "pr_id": "#6577", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6577", "daily_change": "Status Updated", "title": "feat(ofe): ofe cluster toolkit cmek module integration", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 27, 2026", "created_iso": "2026-10-27", "last_action_on": "Nov 24, 2026", "last_action_iso": "2026-11-24", "days_open": 28, "days_inactive": 0, "diff_summary": "4c | 71f (+15267/-189)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6578, "pr_id": "#6578", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6578", "daily_change": "Unchanged", "title": "Update CAE Slurm blueprint with H4D RDMA, C4D-highmem, G4 GPUs, and Managed Lustre", "author": "jrossthomson", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 28, 2026", "created_iso": "2026-10-28", "last_action_on": "Nov 22, 2026", "last_action_iso": "2026-11-22", "days_open": 27, "days_inactive": 2, "diff_summary": "11c | 9f (+548/-134)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal and @agrawalkhushi18", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @agrawalkhushi18", "pending_list": ["@Arpit Agarwal", "@agrawalkhushi18"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal and @agrawalkhushi18 to review the changes."}, {"number": 6632, "pr_id": "#6632", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6632", "daily_change": "Unchanged", "title": "feat(iap): add external app load balancer, backend service, and managed certificate modules- #202", "author": "scott-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Nov 04, 2026", "created_iso": "2026-11-04", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 20, "days_inactive": 1, "diff_summary": "8c | 52f (+2504/-17)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@scott-nag)", "approvals": "-", "changes_requested": "@Arpit Agarwal", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": ["@Arpit Agarwal"], "approved_list": [], "conflicts": "Yes", "status": "Reviewer @Arpit Agarwal has requested changes and is awaiting a response from the author. Also pending review from @Adarsh Kullachi. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6671, "pr_id": "#6671", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6671", "daily_change": "Unchanged", "title": "enable non-root NVIDIA GPU profiling on GPU blueprints", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Nov 13, 2026", "created_iso": "2026-11-13", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 11, "days_inactive": 4, "diff_summary": "1c | 9f (+45/-0)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Adarsh Kullachi to review the changes."}]}, {"date": "2026-11-25", "day_name": "Wed", "generated_at": "Nov 25, 2026 05:00 PM IST", "generated_epoch": 1795606239, "source": "Automated GitHub Fetch (5 PM Bot)", "repo": "GoogleCloudPlatform/cluster-toolkit", "total_open_prs": 51, "resolved_since_prev": [], "rows": [{"number": 6429, "pr_id": "#6429", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6429", "daily_change": "Unchanged", "title": "update Slurm login metadata in place", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Oct 07, 2026", "created_iso": "2026-10-07", "last_action_on": "Nov 16, 2026", "last_action_iso": "2026-11-16", "days_open": 49, "days_inactive": 9, "diff_summary": "5c | 13f (+40/-2)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6493, "pr_id": "#6493", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6493", "daily_change": "Unchanged", "title": "docs(ofe): correct inaccuracies and stale content in OFE documentation", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "documentation, release-chore, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 10, 2026", "last_action_iso": "2026-11-10", "days_open": 41, "days_inactive": 15, "diff_summary": "6c | 13f (+636/-305)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "@Vivek Vikram Singh", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Vivek Vikram Singh"], "conflicts": "Yes", "status": "The PR has received one approval from @Vivek Vikram Singh, while @Adarsh Kullachi has requested changes and is awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6495, "pr_id": "#6495", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6495", "daily_change": "Unchanged", "title": "feat(cloudsql): add a general-purpose Cloud SQL database module", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 41, "days_inactive": 2, "diff_summary": "12c | 25f (+2593/-6)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Vivek Vikram Singh", "approvals": "-", "changes_requested": "-", "pending_reviewers": "-", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author recently pushed updated commits addressing feedback from @Vivek Vikram Singh; awaiting re-review."}, {"number": 6499, "pr_id": "#6499", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6499", "daily_change": "Unchanged", "title": "feat(modules): add instructions community module", "author": "jacobw125", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 41, "days_inactive": 5, "diff_summary": "4c | 15f (+429/-0)", "merge_ci_state": "Review / Checks Required", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "@Adarsh Kullachi", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi and is awaiting a second review and approval from @Arpit Agarwal."}, {"number": 6529, "pr_id": "#6529", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6529", "daily_change": "Unchanged", "title": "feat(security/lldap-server): add LLDAP directory module with SSSD cli…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 09, 2026", "last_action_iso": "2026-11-09", "days_open": 36, "days_inactive": 16, "diff_summary": "1c | 18f (+3604/-1)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag) & @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "There are Gemini suggestions and merge conflicts to verify; currently awaiting review from @Arpit Agarwal and @Adarsh Kullachi and an update from the author."}, {"number": 6533, "pr_id": "#6533", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6533", "daily_change": "Unchanged", "title": "Fix stuck jobs when machines are out of stock", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 36, "days_inactive": 2, "diff_summary": "7c | 13f (+2618/-12)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@siddhartha-quad) & @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "The author has committed updated changes; awaiting @Arpit Agarwal and @Adarsh Kullachi to review the changes. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6550, "pr_id": "#6550", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6550", "daily_change": "Unchanged", "title": "fix(ofe): config-mode region and parser, teardown -y and small script…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-bugfix, external", "created_on": "Oct 23, 2026", "created_iso": "2026-10-23", "last_action_on": "Nov 19, 2026", "last_action_iso": "2026-11-19", "days_open": 33, "days_inactive": 6, "diff_summary": "4c | 3f (+56/-16)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "-", "changes_requested": "@Ishita Chail, @Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Ishita Chail", "@Vivek Vikram Singh"], "approved_list": [], "conflicts": "Yes", "status": "Reviewers @Ishita Chail and @Vivek Vikram Singh have left review comments and are awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6563, "pr_id": "#6563", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6563", "daily_change": "Unchanged", "title": "Fix [CI/Kueue]: Kueue test locks remain held after Cloud Builds are cancelled via the UI.", "author": "deepakrajk-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 26, 2026", "created_iso": "2026-10-26", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 30, "days_inactive": 2, "diff_summary": "3c | 77f (+751/-396)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Reviewer: @Saara Tyagi", "approvals": "@Neelabh Goyal", "changes_requested": "-", "pending_reviewers": "@Saara Tyagi", "pending_list": ["@Saara Tyagi"], "changes_req_list": [], "approved_list": ["@Neelabh Goyal"], "conflicts": "Yes", "status": "The PR has received one approval from @Neelabh Goyal and is awaiting a second review and approval from @Saara Tyagi. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6577, "pr_id": "#6577", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6577", "daily_change": "Unchanged", "title": "feat(ofe): ofe cluster toolkit cmek module integration", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 27, 2026", "created_iso": "2026-10-27", "last_action_on": "Nov 24, 2026", "last_action_iso": "2026-11-24", "days_open": 29, "days_inactive": 1, "diff_summary": "4c | 71f (+15267/-189)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6578, "pr_id": "#6578", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6578", "daily_change": "Status Updated", "title": "Update CAE Slurm blueprint with H4D RDMA, C4D-highmem, G4 GPUs, and Managed Lustre", "author": "jrossthomson", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 28, 2026", "created_iso": "2026-10-28", "last_action_on": "Nov 25, 2026", "last_action_iso": "2026-11-25", "days_open": 28, "days_inactive": 0, "diff_summary": "11c | 9f (+548/-134)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@jrossthomson) & @Arpit Agarwal and @agrawalkhushi18", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @agrawalkhushi18", "pending_list": ["@Arpit Agarwal", "@agrawalkhushi18"], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "There are Gemini suggestions and merge conflicts to verify; currently awaiting review from @Arpit Agarwal and @agrawalkhushi18 and an update from the author."}, {"number": 6632, "pr_id": "#6632", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6632", "daily_change": "Unchanged", "title": "feat(iap): add external app load balancer, backend service, and managed certificate modules- #202", "author": "scott-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Nov 04, 2026", "created_iso": "2026-11-04", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 21, "days_inactive": 2, "diff_summary": "8c | 52f (+2504/-17)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@scott-nag)", "approvals": "-", "changes_requested": "@Arpit Agarwal", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": ["@Arpit Agarwal"], "approved_list": [], "conflicts": "Yes", "status": "Reviewer @Arpit Agarwal has requested changes and is awaiting a response from the author. Also pending review from @Adarsh Kullachi. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6671, "pr_id": "#6671", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6671", "daily_change": "Unchanged", "title": "enable non-root NVIDIA GPU profiling on GPU blueprints", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Nov 13, 2026", "created_iso": "2026-11-13", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 12, "days_inactive": 5, "diff_summary": "1c | 9f (+45/-0)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Adarsh Kullachi to review the changes."}, {"number": 6707, "pr_id": "#6707", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6707", "daily_change": "New", "title": "decouple Managed Lustre zone selection from compute zone in ML tests", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Nov 18, 2026", "created_iso": "2026-11-18", "last_action_on": "Nov 20, 2026", "last_action_iso": "2026-11-20", "days_open": 7, "days_inactive": 5, "diff_summary": "9c | 14f (+948/-119)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Adarsh Kullachi to review the changes."}]}, {"date": "2026-11-26", "day_name": "Thu", "generated_at": "Nov 26, 2026 05:00 PM IST", "generated_epoch": 1795692644, "source": "Automated GitHub Fetch (5 PM Bot)", "repo": "GoogleCloudPlatform/cluster-toolkit", "total_open_prs": 56, "resolved_since_prev": [], "rows": [{"number": 6429, "pr_id": "#6429", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6429", "daily_change": "Unchanged", "title": "update Slurm login metadata in place", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Oct 07, 2026", "created_iso": "2026-10-07", "last_action_on": "Nov 16, 2026", "last_action_iso": "2026-11-16", "days_open": 50, "days_inactive": 10, "diff_summary": "5c | 13f (+40/-2)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6493, "pr_id": "#6493", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6493", "daily_change": "Unchanged", "title": "docs(ofe): correct inaccuracies and stale content in OFE documentation", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "documentation, release-chore, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 10, 2026", "last_action_iso": "2026-11-10", "days_open": 42, "days_inactive": 16, "diff_summary": "6c | 13f (+636/-305)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "@Vivek Vikram Singh", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Vivek Vikram Singh"], "conflicts": "Yes", "status": "The PR has received one approval from @Vivek Vikram Singh, while @Adarsh Kullachi has requested changes and is awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6495, "pr_id": "#6495", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6495", "daily_change": "Unchanged", "title": "feat(cloudsql): add a general-purpose Cloud SQL database module", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 42, "days_inactive": 3, "diff_summary": "12c | 25f (+2593/-6)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Vivek Vikram Singh", "approvals": "-", "changes_requested": "-", "pending_reviewers": "-", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author recently pushed updated commits addressing feedback from @Vivek Vikram Singh; awaiting re-review."}, {"number": 6499, "pr_id": "#6499", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6499", "daily_change": "Status Updated", "title": "feat(modules): add instructions community module", "author": "jacobw125", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 25, 2026", "last_action_iso": "2026-11-25", "days_open": 42, "days_inactive": 1, "diff_summary": "4c | 15f (+429/-0)", "merge_ci_state": "Review / Checks Required", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "@Adarsh Kullachi", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi and is awaiting a second review and approval from @Arpit Agarwal."}, {"number": 6529, "pr_id": "#6529", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6529", "daily_change": "Unchanged", "title": "feat(security/lldap-server): add LLDAP directory module with SSSD cli…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 09, 2026", "last_action_iso": "2026-11-09", "days_open": 37, "days_inactive": 17, "diff_summary": "1c | 18f (+3604/-1)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag) & @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "There are Gemini suggestions and merge conflicts to verify; currently awaiting review from @Arpit Agarwal and @Adarsh Kullachi and an update from the author."}, {"number": 6533, "pr_id": "#6533", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6533", "daily_change": "Status Updated", "title": "Fix stuck jobs when machines are out of stock", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 25, 2026", "last_action_iso": "2026-11-25", "days_open": 37, "days_inactive": 1, "diff_summary": "8c | 13f (+2599/-12)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal and @Adarsh Kullachi to review the changes."}, {"number": 6550, "pr_id": "#6550", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6550", "daily_change": "Unchanged", "title": "fix(ofe): config-mode region and parser, teardown -y and small script…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-bugfix, external", "created_on": "Oct 23, 2026", "created_iso": "2026-10-23", "last_action_on": "Nov 19, 2026", "last_action_iso": "2026-11-19", "days_open": 34, "days_inactive": 7, "diff_summary": "4c | 3f (+56/-16)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "-", "changes_requested": "@Ishita Chail, @Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Ishita Chail", "@Vivek Vikram Singh"], "approved_list": [], "conflicts": "Yes", "status": "Reviewers @Ishita Chail and @Vivek Vikram Singh have left review comments and are awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6563, "pr_id": "#6563", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6563", "daily_change": "Unchanged", "title": "Fix [CI/Kueue]: Kueue test locks remain held after Cloud Builds are cancelled via the UI.", "author": "deepakrajk-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 26, 2026", "created_iso": "2026-10-26", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 31, "days_inactive": 3, "diff_summary": "3c | 77f (+751/-396)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Reviewer: @Saara Tyagi", "approvals": "@Neelabh Goyal", "changes_requested": "-", "pending_reviewers": "@Saara Tyagi", "pending_list": ["@Saara Tyagi"], "changes_req_list": [], "approved_list": ["@Neelabh Goyal"], "conflicts": "Yes", "status": "The PR has received one approval from @Neelabh Goyal and is awaiting a second review and approval from @Saara Tyagi. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6577, "pr_id": "#6577", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6577", "daily_change": "Unchanged", "title": "feat(ofe): ofe cluster toolkit cmek module integration", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 27, 2026", "created_iso": "2026-10-27", "last_action_on": "Nov 24, 2026", "last_action_iso": "2026-11-24", "days_open": 30, "days_inactive": 2, "diff_summary": "4c | 71f (+15267/-189)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6578, "pr_id": "#6578", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6578", "daily_change": "Status Updated", "title": "Update CAE Slurm blueprint with H4D RDMA, C4D-highmem, G4 GPUs, and Managed Lustre", "author": "jrossthomson", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 28, 2026", "created_iso": "2026-10-28", "last_action_on": "Nov 26, 2026", "last_action_iso": "2026-11-26", "days_open": 29, "days_inactive": 0, "diff_summary": "12c | 8f (+541/-130)", "merge_ci_state": "Review / Checks Required", "category": "Changes Requested", "waiting_on": "Author (@jrossthomson)", "approvals": "-", "changes_requested": "@agrawalkhushi18", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": ["@agrawalkhushi18"], "approved_list": [], "conflicts": "No", "status": "Reviewer @agrawalkhushi18 has requested changes and is awaiting a response from the author. Also pending review from @Arpit Agarwal."}, {"number": 6632, "pr_id": "#6632", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6632", "daily_change": "Status Updated", "title": "feat(iap): add external app load balancer, backend service, and managed certificate modules- #202", "author": "scott-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Nov 04, 2026", "created_iso": "2026-11-04", "last_action_on": "Nov 26, 2026", "last_action_iso": "2026-11-26", "days_open": 22, "days_inactive": 0, "diff_summary": "10c | 52f (+2507/-17)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Adarsh Kullachi and @Arpit Agarwal", "approvals": "-", "changes_requested": "@Arpit Agarwal", "pending_reviewers": "@Adarsh Kullachi, @Arpit Agarwal", "pending_list": ["@Adarsh Kullachi", "@Arpit Agarwal"], "changes_req_list": ["@Arpit Agarwal"], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Adarsh Kullachi and @Arpit Agarwal to review the changes."}, {"number": 6671, "pr_id": "#6671", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6671", "daily_change": "Status Updated", "title": "enable non-root NVIDIA GPU profiling on GPU blueprints", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-bugfix, external", "created_on": "Nov 13, 2026", "created_iso": "2026-11-13", "last_action_on": "Nov 26, 2026", "last_action_iso": "2026-11-26", "days_open": 13, "days_inactive": 0, "diff_summary": "2c | 11f (+55/-0)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Swarna Bharathi Mantena and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Swarna Bharathi Mantena, @Adarsh Kullachi", "pending_list": ["@Swarna Bharathi Mantena", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Swarna Bharathi Mantena and @Adarsh Kullachi to review the changes."}, {"number": 6707, "pr_id": "#6707", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6707", "daily_change": "Status Updated", "title": "decouple Managed Lustre zone selection from compute zone in ML tests", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Nov 18, 2026", "created_iso": "2026-11-18", "last_action_on": "Nov 26, 2026", "last_action_iso": "2026-11-26", "days_open": 8, "days_inactive": 0, "diff_summary": "9c | 14f (+948/-119)", "merge_ci_state": "Review / Checks Required", "category": "Changes Requested", "waiting_on": "Author (@aslam-quad)", "approvals": "-", "changes_requested": "@Swarna Bharathi Mantena", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": ["@Swarna Bharathi Mantena"], "approved_list": [], "conflicts": "No", "status": "Reviewer @Swarna Bharathi Mantena has left review comments and is awaiting a response from the author. Also pending review from @Adarsh Kullachi."}, {"number": 6715, "pr_id": "#6715", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6715", "daily_change": "New", "title": "Removal of gke-tpu-v6e-flex and slurm-gcp-v6-tpu tests", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Nov 19, 2026", "created_iso": "2026-11-19", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 7, "days_inactive": 3, "diff_summary": "2c | 9f (+1/-800)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Reviewer: @Adarsh Kullachi", "approvals": "@Neelabh Goyal", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": [], "approved_list": ["@Neelabh Goyal"], "conflicts": "Yes", "status": "The PR has received one approval from @Neelabh Goyal and is awaiting a second review and approval from @Adarsh Kullachi. The author replied to comments on Nov 23, 2026. Additionally, there are merge conflicts that need to be resolved."}]}, {"date": "2026-11-27", "day_name": "Fri", "generated_at": "Nov 27, 2026 05:00 PM IST", "generated_epoch": 1795779069, "source": "Automated GitHub Fetch (5 PM Bot)", "repo": "GoogleCloudPlatform/cluster-toolkit", "total_open_prs": 52, "resolved_since_prev": [], "rows": [{"number": 6429, "pr_id": "#6429", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6429", "daily_change": "Unchanged", "title": "update Slurm login metadata in place", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "external", "created_on": "Oct 07, 2026", "created_iso": "2026-10-07", "last_action_on": "Nov 16, 2026", "last_action_iso": "2026-11-16", "days_open": 51, "days_inactive": 11, "diff_summary": "5c | 13f (+40/-2)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6493, "pr_id": "#6493", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6493", "daily_change": "Unchanged", "title": "docs(ofe): correct inaccuracies and stale content in OFE documentation", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "documentation, release-chore, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 10, 2026", "last_action_iso": "2026-11-10", "days_open": 43, "days_inactive": 17, "diff_summary": "6c | 13f (+636/-305)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "@Vivek Vikram Singh", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Vivek Vikram Singh"], "conflicts": "Yes", "status": "The PR has received one approval from @Vivek Vikram Singh, while @Adarsh Kullachi has requested changes and is awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6495, "pr_id": "#6495", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6495", "daily_change": "Unchanged", "title": "feat(cloudsql): add a general-purpose Cloud SQL database module", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 43, "days_inactive": 4, "diff_summary": "12c | 25f (+2593/-6)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Vivek Vikram Singh", "approvals": "-", "changes_requested": "-", "pending_reviewers": "-", "pending_list": [], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author recently pushed updated commits addressing feedback from @Vivek Vikram Singh; awaiting re-review."}, {"number": 6499, "pr_id": "#6499", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6499", "daily_change": "Unchanged", "title": "feat(modules): add instructions community module", "author": "jacobw125", "contributor_type": "External", "base_branch": "develop", "labels": "release-new-modules, external", "created_on": "Oct 15, 2026", "created_iso": "2026-10-15", "last_action_on": "Nov 25, 2026", "last_action_iso": "2026-11-25", "days_open": 43, "days_inactive": 2, "diff_summary": "4c | 15f (+429/-0)", "merge_ci_state": "Review / Checks Required", "category": "Approved (Needs 2nd Review)", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "@Adarsh Kullachi", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": ["@Adarsh Kullachi"], "conflicts": "No", "status": "The PR has received one approval from @Adarsh Kullachi and is awaiting a second review and approval from @Arpit Agarwal."}, {"number": 6529, "pr_id": "#6529", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6529", "daily_change": "Unchanged", "title": "feat(security/lldap-server): add LLDAP directory module with SSSD cli…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 09, 2026", "last_action_iso": "2026-11-09", "days_open": 38, "days_inactive": 18, "diff_summary": "1c | 18f (+3604/-1)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag) & @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "Yes", "status": "There are Gemini suggestions and merge conflicts to verify; currently awaiting review from @Arpit Agarwal and @Adarsh Kullachi and an update from the author."}, {"number": 6533, "pr_id": "#6533", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6533", "daily_change": "Unchanged", "title": "Fix stuck jobs when machines are out of stock", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 20, 2026", "created_iso": "2026-10-20", "last_action_on": "Nov 25, 2026", "last_action_iso": "2026-11-25", "days_open": 38, "days_inactive": 2, "diff_summary": "8c | 13f (+2599/-12)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal and @Adarsh Kullachi", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal, @Adarsh Kullachi", "pending_list": ["@Arpit Agarwal", "@Adarsh Kullachi"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal and @Adarsh Kullachi to review the changes."}, {"number": 6550, "pr_id": "#6550", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6550", "daily_change": "Unchanged", "title": "fix(ofe): config-mode region and parser, teardown -y and small script…", "author": "ek-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-bugfix, external", "created_on": "Oct 23, 2026", "created_iso": "2026-10-23", "last_action_on": "Nov 19, 2026", "last_action_iso": "2026-11-19", "days_open": 35, "days_inactive": 8, "diff_summary": "4c | 3f (+56/-16)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@ek-nag)", "approvals": "-", "changes_requested": "@Ishita Chail, @Vivek Vikram Singh", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Ishita Chail", "@Vivek Vikram Singh"], "approved_list": [], "conflicts": "Yes", "status": "Reviewers @Ishita Chail and @Vivek Vikram Singh have left review comments and are awaiting a response from the author. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6563, "pr_id": "#6563", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6563", "daily_change": "Unchanged", "title": "Fix [CI/Kueue]: Kueue test locks remain held after Cloud Builds are cancelled via the UI.", "author": "deepakrajk-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Oct 26, 2026", "created_iso": "2026-10-26", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 32, "days_inactive": 4, "diff_summary": "3c | 77f (+751/-396)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Reviewer: @Saara Tyagi", "approvals": "@Neelabh Goyal", "changes_requested": "-", "pending_reviewers": "@Saara Tyagi", "pending_list": ["@Saara Tyagi"], "changes_req_list": [], "approved_list": ["@Neelabh Goyal"], "conflicts": "Yes", "status": "The PR has received one approval from @Neelabh Goyal and is awaiting a second review and approval from @Saara Tyagi. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6577, "pr_id": "#6577", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6577", "daily_change": "Unchanged", "title": "feat(ofe): ofe cluster toolkit cmek module integration", "author": "ep-nag", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 27, 2026", "created_iso": "2026-10-27", "last_action_on": "Nov 24, 2026", "last_action_iso": "2026-11-24", "days_open": 31, "days_inactive": 3, "diff_summary": "4c | 71f (+15267/-189)", "merge_ci_state": "Review / Checks Required", "category": "Awaiting Re-Review", "waiting_on": "Reviewer: @Arpit Agarwal", "approvals": "-", "changes_requested": "-", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": [], "approved_list": [], "conflicts": "No", "status": "The author has committed updated changes; awaiting @Arpit Agarwal to review the changes."}, {"number": 6578, "pr_id": "#6578", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6578", "daily_change": "Status Updated", "title": "Update CAE Slurm blueprint with H4D RDMA, C4D-highmem, G4 GPUs, and Managed Lustre", "author": "jrossthomson", "contributor_type": "External", "base_branch": "develop", "labels": "release-improvements, external", "created_on": "Oct 28, 2026", "created_iso": "2026-10-28", "last_action_on": "Nov 26, 2026", "last_action_iso": "2026-11-26", "days_open": 30, "days_inactive": 1, "diff_summary": "12c | 8f (+541/-130)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@jrossthomson)", "approvals": "-", "changes_requested": "@agrawalkhushi18", "pending_reviewers": "@Arpit Agarwal", "pending_list": ["@Arpit Agarwal"], "changes_req_list": ["@agrawalkhushi18"], "approved_list": [], "conflicts": "Yes", "status": "Reviewer @agrawalkhushi18 has requested changes and is awaiting a response from the author. Also pending review from @Arpit Agarwal. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6632, "pr_id": "#6632", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6632", "daily_change": "Status Updated", "title": "feat(iap): add external app load balancer, backend service, and managed certificate modules- #202", "author": "scott-nag", "contributor_type": "External", "base_branch": "develop", "labels": "external", "created_on": "Nov 04, 2026", "created_iso": "2026-11-04", "last_action_on": "Nov 26, 2026", "last_action_iso": "2026-11-26", "days_open": 23, "days_inactive": 1, "diff_summary": "10c | 52f (+2507/-17)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Author (@scott-nag) & @Adarsh Kullachi and @Arpit Agarwal", "approvals": "-", "changes_requested": "@Arpit Agarwal", "pending_reviewers": "@Adarsh Kullachi, @Arpit Agarwal", "pending_list": ["@Adarsh Kullachi", "@Arpit Agarwal"], "changes_req_list": ["@Arpit Agarwal"], "approved_list": [], "conflicts": "Yes", "status": "The author has committed updated changes; awaiting @Adarsh Kullachi and @Arpit Agarwal to review the changes. Additionally, there are merge conflicts that need to be resolved."}, {"number": 6671, "pr_id": "#6671", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6671", "daily_change": "Status Updated", "title": "enable non-root NVIDIA GPU profiling on GPU blueprints", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-bugfix, external", "created_on": "Nov 13, 2026", "created_iso": "2026-11-13", "last_action_on": "Nov 27, 2026", "last_action_iso": "2026-11-27", "days_open": 14, "days_inactive": 0, "diff_summary": "3c | 10f (+50/-0)", "merge_ci_state": "Review / Checks Required", "category": "Changes Requested", "waiting_on": "Author (@aslam-quad)", "approvals": "@Swarna Bharathi Mantena", "changes_requested": "@Adarsh Kullachi", "pending_reviewers": "-", "pending_list": [], "changes_req_list": ["@Adarsh Kullachi"], "approved_list": ["@Swarna Bharathi Mantena"], "conflicts": "No", "status": "The PR has received one approval from @Swarna Bharathi Mantena, while @Adarsh Kullachi has left review comments and is awaiting a response from the author."}, {"number": 6707, "pr_id": "#6707", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6707", "daily_change": "Unchanged", "title": "decouple Managed Lustre zone selection from compute zone in ML tests", "author": "aslam-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Nov 18, 2026", "created_iso": "2026-11-18", "last_action_on": "Nov 26, 2026", "last_action_iso": "2026-11-26", "days_open": 9, "days_inactive": 1, "diff_summary": "9c | 14f (+948/-119)", "merge_ci_state": "Review / Checks Required", "category": "Changes Requested", "waiting_on": "Author (@aslam-quad)", "approvals": "-", "changes_requested": "@Swarna Bharathi Mantena", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": ["@Swarna Bharathi Mantena"], "approved_list": [], "conflicts": "No", "status": "Reviewer @Swarna Bharathi Mantena has left review comments and is awaiting a response from the author. Also pending review from @Adarsh Kullachi."}, {"number": 6715, "pr_id": "#6715", "url": "https://github.com/GoogleCloudPlatform/cluster-toolkit/pull/6715", "daily_change": "Unchanged", "title": "Removal of gke-tpu-v6e-flex and slurm-gcp-v6-tpu tests", "author": "siddhartha-quad", "contributor_type": "Quadrant (-quad)", "base_branch": "develop", "labels": "release-chore, external", "created_on": "Nov 19, 2026", "created_iso": "2026-11-19", "last_action_on": "Nov 23, 2026", "last_action_iso": "2026-11-23", "days_open": 8, "days_inactive": 4, "diff_summary": "2c | 9f (+1/-800)", "merge_ci_state": "Merge Conflicts", "category": "Merge Conflicts", "waiting_on": "Reviewer: @Adarsh Kullachi", "approvals": "@Neelabh Goyal", "changes_requested": "-", "pending_reviewers": "@Adarsh Kullachi", "pending_list": ["@Adarsh Kullachi"], "changes_req_list": [], "approved_list": ["@Neelabh Goyal"], "conflicts": "Yes", "status": "The PR has received one approval from @Neelabh Goyal and is awaiting a second review and approval from @Adarsh Kullachi. The author replied to comments on Nov 23, 2026. Additionally, there are merge conflicts that need to be resolved."}]}]};
+    const SNAPS = DATA.snapshots || [];
+
+    const state = {
+      snapIdx: Math.max(0, SNAPS.length - 1),
+      tab: 'overview',
+      category: 'all',
+      reviewer: 'all',
+      changeFilter: 'all',
+      diffFilter: 'all',
+      expandedPrs: {}
+    };
+
+    const CAT_META = {
+      'Merge Conflicts': { color: '#ef4444', badge: 'bg-rose-500/15 text-rose-600 border-rose-500/30', short: 'Merge Conflicts' },
+      'Changes Requested': { color: '#f97316', badge: 'bg-amber-500/15 text-amber-600 border-amber-500/30', short: 'Changes Requested' },
+      'Awaiting Re-Review': { color: '#3b82f6', badge: 'bg-blue-500/15 text-blue-600 border-blue-500/30', short: 'Awaiting Re-Review' },
+      'Awaiting Review': { color: '#eab308', badge: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30', short: 'Awaiting Review' },
+      'Approved (Needs 2nd Review)': { color: '#10b981', badge: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30', short: 'Approved (Needs 2nd)' },
+      'Approved (Ready / Pending Merge)': { color: '#059669', badge: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30', short: 'Approved (Ready)' }
+    };
+
+    const CHANGE_BADGE = {
+      'New': 'bg-purple-500/15 text-purple-600 border-purple-500/30',
+      'Status Updated': 'bg-blue-500/15 text-blue-600 border-blue-500/30',
+      'Merged': 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30',
+      'Closed': 'bg-[var(--app-muted)] text-[var(--app-muted-foreground)] border-[var(--app-border)]',
+      'Unchanged': 'bg-[var(--app-muted)] text-[var(--app-muted-foreground)] border-[var(--app-border)]',
+      'Baseline': 'bg-[var(--app-muted)] text-[var(--app-muted-foreground)] border-[var(--app-border)]'
+    };
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+    }
+
+    function currentSnap() {
+      return SNAPS[state.snapIdx] || { rows: [], resolved_since_prev: [] };
+    }
+
+    function prevSnap() {
+      return state.snapIdx > 0 ? SNAPS[state.snapIdx - 1] : null;
+    }
+
+    function initDateSelect() {
+      const sel = document.getElementById('dateSelect');
+      sel.innerHTML = SNAPS.map((sn, i) => {
+        const latestTag = i === SNAPS.length - 1 ? ' · Latest' : '';
+        return `<option value="${i}" ${i === state.snapIdx ? 'selected' : ''}>${esc(sn.date)} (${esc(sn.day_name || '')})${latestTag}</option>`;
+      }).reverse().join('');
+    }
+
+    function onDateChange(val) {
+      state.snapIdx = parseInt(val, 10) || 0;
+      state.expandedPrs = {};
+      renderAll();
+    }
+
+    function switchTab(tab) {
+      state.tab = tab;
+      ['overview', 'diff', 'reviewers', 'chat'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.classList.toggle('hidden', t !== tab);
+      });
+      document.querySelectorAll('.nav-tab').forEach(btn => {
+        const active = btn.getAttribute('data-tab') === tab;
+        btn.className = 'nav-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ' + (
+          active
+            ? 'bg-[var(--app-primary)] text-[var(--app-primary-foreground)] shadow-sm'
+            : 'bg-[var(--app-muted)] text-[var(--app-muted-foreground)] hover:text-[var(--app-foreground)]'
+        );
+      });
+    }
+
+    function filterByKpi(kind) {
+      switchTab('overview');
+      state.reviewer = 'all';
+      state.changeFilter = 'all';
+      if (kind === 'all') {
+        state.category = 'all';
+      } else if (kind === 'updated') {
+        state.category = 'all';
+        state.changeFilter = 'updated_or_new';
+      } else {
+        state.category = state.category === kind ? 'all' : kind;
+      }
+      renderKpis();
+      applyFilters();
+    }
+
+    function filterByReviewer(rev) {
+      switchTab('overview');
+      state.reviewer = state.reviewer === rev ? 'all' : rev;
+      renderReviewerMini();
+      applyFilters();
+    }
+
+    function resetFilters() {
+      state.category = 'all';
+      state.reviewer = 'all';
+      state.changeFilter = 'all';
+      document.getElementById('searchInput').value = '';
+      document.getElementById('typeFilter').value = 'all';
+      document.getElementById('sortSelect').value = 'number_asc';
+      renderAll();
+    }
+
+    function renderHeader() {
+      const sn = currentSnap();
+      const openInfo = sn.total_open_prs ? ` · ${sn.total_open_prs} open repo PRs scanned` : '';
+      document.getElementById('headerSubtitle').textContent =
+        `${sn.repo || 'GoogleCloudPlatform/cluster-toolkit'} · Updated ${sn.generated_at || sn.date} · ${sn.source || 'Automated'}${openInfo}`;
+
+      const rows = sn.rows || [];
+      const res = sn.resolved_since_prev || [];
+      const changedCount = rows.filter(r => r.daily_change === 'New' || r.daily_change === 'Status Updated').length + res.length;
+      const badge = document.getElementById('diffBadge');
+      badge.textContent = changedCount;
+      badge.className = 'ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ' +
+        (state.tab === 'diff' ? 'bg-white/25 text-white' : 'bg-blue-500/15 text-blue-600');
+    }
+
+    function renderKpis() {
+      const sn = currentSnap();
+      const rows = sn.rows || [];
+      const res = sn.resolved_since_prev || [];
+      const total = rows.length;
+      const extN = rows.filter(r => r.contributor_type === 'External').length;
+      const quadN = total - extN;
+      const awaitRev = rows.filter(r => r.category === 'Awaiting Review' || r.category === 'Awaiting Re-Review').length;
+      const approvedN = rows.filter(r => (r.category || '').startsWith('Approved')).length;
+      const changesN = rows.filter(r => r.category === 'Changes Requested').length;
+      const conflictN = rows.filter(r => r.conflicts === 'Yes' || r.category === 'Merge Conflicts').length;
+      const avgAge = total ? (rows.reduce((a, b) => a + (b.days_open || 0), 0) / total).toFixed(1) : '0';
+      const updN = rows.filter(r => r.daily_change === 'New' || r.daily_change === 'Status Updated').length;
+
+      const cards = [
+        { id: 'all', label: 'Total Stale PRs', val: total, sub: `${extN} External · ${quadN} Quadrant`, accent: 'border-l-blue-500', active: state.category === 'all' && state.changeFilter === 'all' },
+        { id: 'awaiting_rev', label: 'Awaiting Reviewer', val: awaitRev, sub: 'Review / Re-review queue', accent: 'border-l-sky-500', active: state.category === 'awaiting_rev' },
+        { id: 'approved_grp', label: 'Approved (1+ LGTM)', val: approvedN, sub: 'Awaiting 2nd review / merge', accent: 'border-l-emerald-500', active: state.category === 'approved_grp' },
+        { id: 'Changes Requested', label: 'Awaiting Author', val: changesN, sub: 'Changes or comments open', accent: 'border-l-amber-500', active: state.category === 'Changes Requested' },
+        { id: 'Merge Conflicts', label: 'Merge Conflicts', val: conflictN, sub: conflictN ? 'Needs rebase / conflict fix' : 'All branches clean', accent: 'border-l-rose-500', active: state.category === 'Merge Conflicts' },
+        { id: 'updated', label: 'Changed vs Prior Day', val: updN, sub: `${res.length} merged/closed · Avg ${avgAge}d open`, accent: 'border-l-purple-500', active: state.changeFilter === 'updated_or_new' }
+      ];
+
+      document.getElementById('kpiGrid').innerHTML = cards.map(c => `
+        <button type="button" onclick="filterByKpi('${c.id}')"
+          class="text-left bg-[var(--app-card)] border border-[var(--app-border)] border-l-4 ${c.accent} rounded-xl p-3.5 shadow-sm transition hover:opacity-95 ${c.active ? 'ring-2 ring-[var(--app-primary)]' : ''}">
+          <div class="text-[11px] font-medium text-[var(--app-muted-foreground)] truncate">${esc(c.label)}</div>
+          <div class="mt-1 text-2xl font-bold tracking-tight text-[var(--app-foreground)]">${c.val}</div>
+          <div class="mt-0.5 text-[11px] text-[var(--app-muted-foreground)] truncate">${esc(c.sub)}</div>
+        </button>
+      `).join('');
+    }
+
+    function renderCategoryDonut() {
+      const rows = currentSnap().rows || [];
+      const total = rows.length || 1;
+      const counts = {};
+      rows.forEach(r => {
+        const c = r.category || 'Awaiting Review';
+        counts[c] = (counts[c] || 0) + 1;
+      });
+      const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+      // Build SVG stroke-dasharray donut (r=38, C=238.76)
+      const C = 2 * Math.PI * 38;
+      let offset = 0;
+      const slices = entries.map(([cat, count]) => {
+        const len = (count / total) * C;
+        const color = (CAT_META[cat] || { color: '#64748b' }).color;
+        const svg = `<circle cx="50" cy="50" r="38" fill="none" stroke="${color}" stroke-width="14"
+          stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}"
+          transform="rotate(-90 50 50)"/>`;
+        offset += len;
+        return svg;
+      }).join('');
+
+      const legend = entries.map(([cat, count]) => {
+        const meta = CAT_META[cat] || { color: '#64748b', short: cat };
+        const isSel = state.category === cat;
+        return `
+          <button type="button" data-cat="${esc(cat)}" onclick="filterByKpi(this.getAttribute('data-cat'))"
+            class="w-full flex items-center justify-between gap-2 px-2 py-1 rounded-md text-left text-xs transition hover:bg-[var(--app-muted)] ${isSel ? 'bg-[var(--app-muted)] font-semibold' : ''}">
+            <span class="flex items-center gap-2 truncate">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background:${meta.color}"></span>
+              <span class="truncate text-[var(--app-foreground)]">${esc(meta.short)}</span>
+            </span>
+            <span class="font-bold text-[var(--app-foreground)] shrink-0">${count}</span>
+          </button>`;
+      }).join('');
+
+      document.getElementById('categoryChart').innerHTML = `
+        <div class="relative w-28 h-28 shrink-0">
+          <svg viewBox="0 0 100 100" class="w-full h-full">${slices}</svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span class="text-lg font-bold text-[var(--app-foreground)] leading-none">${rows.length}</span>
+            <span class="text-[10px] text-[var(--app-muted-foreground)]">PRs</span>
+          </div>
+        </div>
+        <div class="flex-1 min-w-0 space-y-0.5">${legend}</div>
+      `;
+    }
+
+    function renderTrendChart() {
+      const recent = SNAPS.slice(-10);
+      const maxVal = Math.max(1, ...recent.map(s => (s.rows || []).length));
+
+      const bars = recent.map((sn) => {
+        const globalIdx = SNAPS.indexOf(sn);
+        const srows = sn.rows || [];
+        const ext = srows.filter(r => r.contributor_type === 'External').length;
+        const quad = srows.length - ext;
+        const conf = srows.filter(r => r.conflicts === 'Yes').length;
+        const extPct = Math.round((ext / maxVal) * 100);
+        const quadPct = Math.round((quad / maxVal) * 100);
+        const isCurr = globalIdx === state.snapIdx;
+        const shortDate = (sn.date || '').slice(5);
+
+        return `
+          <button type="button" onclick="document.getElementById('dateSelect').value='${globalIdx}'; onDateChange('${globalIdx}')"
+            class="flex-1 flex flex-col items-center gap-1 group focus:outline-none">
+            <div class="flex items-center gap-1 text-[11px] font-bold text-[var(--app-foreground)]">
+              <span>${srows.length}</span>
+              ${conf ? `<span class="px-1 rounded text-[9px] bg-rose-500/15 text-rose-600" title="${conf} conflicts">${conf}!</span>` : ''}
+            </div>
+            <div class="w-full max-w-[44px] h-24 flex flex-col justify-end rounded-t-md overflow-hidden ${isCurr ? 'ring-2 ring-[var(--app-primary)] ring-offset-1' : 'opacity-80 group-hover:opacity-100'}">
+              ${quad > 0 ? `<div class="w-full bg-indigo-400" style="height:${quadPct}%" title="Partner (-quad): ${quad}"></div>` : ''}
+              ${ext > 0 ? `<div class="w-full bg-blue-500" style="height:${extPct}%" title="External: ${ext}"></div>` : ''}
+            </div>
+            <div class="text-[10px] ${isCurr ? 'font-bold text-[var(--app-foreground)]' : 'text-[var(--app-muted-foreground)]'} leading-tight text-center">
+              <div>${esc(shortDate)}</div>
+              <div class="text-[9px] opacity-75">${esc(sn.day_name || '')}</div>
+            </div>
+          </button>`;
+      }).join('');
+
+      document.getElementById('trendChart').innerHTML = `<div class="w-full flex items-end justify-around gap-2 pt-2">${bars}</div>`;
+    }
+
+    function computeReviewers(rows) {
+      const map = {};
+      const ensure = (name) => {
+        if (!map[name]) map[name] = { name, pending: [], changes: [], approved: [] };
+        return map[name];
+      };
+      rows.forEach(r => {
+        (r.pending_list || []).forEach(u => ensure(u).pending.push(r));
+        (r.changes_req_list || []).forEach(u => ensure(u).changes.push(r));
+        (r.approved_list || []).forEach(u => ensure(u).approved.push(r));
+      });
+      return Object.values(map).sort((a, b) =>
+        (b.pending.length - a.pending.length) || (b.changes.length - a.changes.length) || a.name.localeCompare(b.name)
+      );
+    }
+
+    function renderReviewerMini() {
+      const revs = computeReviewers(currentSnap().rows || []).filter(r => r.pending.length > 0).slice(0, 5);
+      if (!revs.length) {
+        document.getElementById('reviewerMiniChart').innerHTML =
+          '<p class="text-xs text-[var(--app-muted-foreground)] py-6 text-center">No pending reviewer assignments.</p>';
+        return;
+      }
+      const maxP = Math.max(1, ...revs.map(r => r.pending.length));
+      document.getElementById('reviewerMiniChart').innerHTML = revs.map(r => {
+        const pct = Math.round((r.pending.length / maxP) * 100);
+        const active = state.reviewer === r.name;
+        const prList = r.pending.map(p => p.pr_id).join(', ');
+        return `
+          <button type="button" data-rev="${esc(r.name)}" onclick="filterByReviewer(this.getAttribute('data-rev'))"
+            class="w-full text-left p-1.5 rounded-lg transition hover:bg-[var(--app-muted)] ${active ? 'bg-[var(--app-muted)] ring-1 ring-[var(--app-primary)]' : ''}">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-medium text-[var(--app-foreground)] truncate">${esc(r.name)}</span>
+              <span class="text-[11px] font-bold text-blue-600 shrink-0">${r.pending.length} PR${r.pending.length > 1 ? 's' : ''}</span>
+            </div>
+            <div class="w-full h-1.5 rounded-full bg-[var(--app-muted)] overflow-hidden">
+              <div class="h-full rounded-full bg-blue-500" style="width:${pct}%"></div>
+            </div>
+            <div class="mt-0.5 text-[10px] text-[var(--app-muted-foreground)] truncate">${esc(prList)}</div>
+          </button>`;
+      }).join('');
+    }
+
+    function toggleRowExpand(num) {
+      state.expandedPrs[num] = !state.expandedPrs[num];
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const sn = currentSnap();
+      const prev = prevSnap();
+      const prevMap = {};
+      if (prev) (prev.rows || []).forEach(r => { prevMap[r.number] = r; });
+
+      const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const typeF = document.getElementById('typeFilter').value;
+      const sortBy = document.getElementById('sortSelect').value;
+
+      let list = (sn.rows || []).filter(r => {
+        if (typeF !== 'all' && r.contributor_type !== typeF) return false;
+        if (state.category === 'awaiting_rev') {
+          if (r.category !== 'Awaiting Review' && r.category !== 'Awaiting Re-Review') return false;
+        } else if (state.category === 'approved_grp') {
+          if (!(r.category || '').startsWith('Approved')) return false;
+        } else if (state.category === 'Merge Conflicts') {
+          if (r.conflicts !== 'Yes' && r.category !== 'Merge Conflicts') return false;
+        } else if (state.category !== 'all' && r.category !== state.category) {
+          return false;
+        }
+        if (state.changeFilter === 'updated_or_new') {
+          if (r.daily_change !== 'New' && r.daily_change !== 'Status Updated') return false;
+        }
+        if (state.reviewer !== 'all') {
+          const pend = r.pending_list || [];
+          if (!pend.includes(state.reviewer)) return false;
+        }
+        if (q) {
+          const hay = [
+            r.pr_id, r.title, r.author, r.category, r.waiting_on,
+            r.approvals, r.changes_requested, r.pending_reviewers, r.status, r.labels
+          ].join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      list = list.slice().sort((a, b) => {
+        if (sortBy === 'days_open_desc') return (b.days_open || 0) - (a.days_open || 0);
+        if (sortBy === 'inactive_desc') return (b.days_inactive || 0) - (a.days_inactive || 0);
+        if (sortBy === 'updated_first') {
+          const rank = x => x.daily_change === 'New' ? 0 : (x.daily_change === 'Status Updated' ? 1 : 2);
+          return rank(a) - rank(b) || (a.number - b.number);
+        }
+        if (sortBy === 'conflicts_first') {
+          return (b.conflicts === 'Yes' ? 1 : 0) - (a.conflicts === 'Yes' ? 1 : 0) || (b.days_open - a.days_open);
+        }
+        return (a.number || 0) - (b.number || 0);
+      });
+
+      const hasActive = q || typeF !== 'all' || state.category !== 'all' || state.reviewer !== 'all' || state.changeFilter !== 'all';
+      document.getElementById('resetFiltersBtn').classList.toggle('hidden', !hasActive);
+      document.getElementById('resultCounter').textContent = `Showing ${list.length} of ${(sn.rows || []).length} PRs`;
+
+      // Active pills
+      const pills = [];
+      if (state.category !== 'all') pills.push(`Category: ${state.category}`);
+      if (state.reviewer !== 'all') pills.push(`Pending Reviewer: ${state.reviewer}`);
+      if (state.changeFilter !== 'all') pills.push('Changed vs Prior Day');
+      if (typeF !== 'all') pills.push(`Contributor: ${typeF}`);
+      document.getElementById('activeFilterPills').innerHTML = pills.map(p =>
+        `<span class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--app-primary)]/15 text-[var(--app-primary)]">${esc(p)}</span>`
+      ).join('');
+
+      const tbody = document.getElementById('prTableBody');
+      if (!list.length) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-xs text-[var(--app-muted-foreground)]">No stale PRs match the current filters.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = list.map(r => {
+        const catStyle = (CAT_META[r.category] || { badge: 'bg-[var(--app-muted)] text-[var(--app-foreground)] border-[var(--app-border)]' }).badge;
+        const chgStyle = CHANGE_BADGE[r.daily_change] || CHANGE_BADGE['Unchanged'];
+        const isExp = !!state.expandedPrs[r.number];
+        const prevRow = prevMap[r.number];
+
+        const detailRow = isExp ? `
+          <tr class="bg-[var(--app-muted)]/60">
+            <td colspan="6" class="px-4 py-3 text-xs">
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div><span class="font-semibold text-[var(--app-muted-foreground)]">Approved By:</span> <span class="text-[var(--app-foreground)]">${esc(r.approvals || '-')}</span></div>
+                <div><span class="font-semibold text-[var(--app-muted-foreground)]">Changes / Comments:</span> <span class="text-[var(--app-foreground)]">${esc(r.changes_requested || '-')}</span></div>
+                <div><span class="font-semibold text-[var(--app-muted-foreground)]">Pending Reviewers:</span> <span class="text-[var(--app-foreground)]">${esc(r.pending_reviewers || '-')}</span></div>
+                <div><span class="font-semibold text-[var(--app-muted-foreground)]">Branch / Diff:</span> <span class="text-[var(--app-foreground)]">${esc(r.base_branch || 'develop')} · ${esc(r.diff_summary || '-')}</span></div>
+              </div>
+              <div class="mt-2 pt-2 border-t border-[var(--app-border)] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--app-muted-foreground)]">
+                <span><strong>Labels:</strong> ${esc(r.labels || 'external')} · <strong>Merge/CI:</strong> ${esc(r.merge_ci_state || '-')}</span>
+                ${prevRow ? `<span><strong>Prior Report (${esc(prev.date)}):</strong> ${esc(prevRow.status)}</span>` : ''}
+              </div>
+            </td>
+          </tr>` : '';
+
+        return `
+          <tr class="hover:bg-[var(--app-muted)]/40 transition align-top">
+            <td class="py-3 px-3 whitespace-nowrap">
+              <a href="${esc(r.url)}" target="_blank" rel="noopener noreferrer"
+                class="font-bold text-blue-600 hover:underline inline-flex items-center gap-0.5">
+                ${esc(r.pr_id)}
+                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M7 7h10v10"/></svg>
+              </a>
+              <div class="mt-1">
+                <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold border ${chgStyle}">
+                  ${esc(r.daily_change === 'Status Updated' ? 'Updated' : (r.daily_change || 'Open'))}
+                </span>
+              </div>
+            </td>
+            <td class="py-3 px-3">
+              <button type="button" onclick="toggleRowExpand(${r.number})"
+                class="text-left font-semibold text-[var(--app-foreground)] hover:text-[var(--app-primary)] leading-snug">
+                ${esc(r.title)}
+              </button>
+              <div class="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[var(--app-muted-foreground)]">
+                <span class="font-mono">@${esc(r.author)}</span>
+                <span>·</span>
+                <span class="px-1.5 py-0.2 rounded bg-[var(--app-muted)] border border-[var(--app-border)] text-[10px]">${esc(r.contributor_type)}</span>
+                ${r.diff_summary && r.diff_summary !== '-' ? `<span>· ${esc(r.diff_summary)}</span>` : ''}
+                <button type="button" onclick="toggleRowExpand(${r.number})" class="text-[10px] text-[var(--app-primary)] font-medium ml-1">
+                  ${isExp ? 'Hide details ▲' : 'Details ▼'}
+                </button>
+              </div>
+            </td>
+            <td class="py-3 px-3 whitespace-nowrap text-[11px]">
+              <div class="text-[var(--app-foreground)]"><span class="text-[var(--app-muted-foreground)]">Created:</span> ${esc(r.created_on)}</div>
+              <div class="text-[var(--app-foreground)] mt-0.5"><span class="text-[var(--app-muted-foreground)]">Last Act:</span> ${esc(r.last_action_on)}</div>
+              <div class="mt-1 text-[10px] font-medium text-[var(--app-muted-foreground)]">
+                ${r.days_open}d open · ${r.days_inactive}d idle
+              </div>
+            </td>
+            <td class="py-3 px-3">
+              <span class="inline-block px-2 py-0.5 rounded-md text-[11px] font-semibold border ${catStyle}">
+                ${esc(r.category)}
+              </span>
+              ${r.conflicts === 'Yes' && r.category !== 'Merge Conflicts'
+                ? '<div class="mt-1"><span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-500/15 text-rose-600 border border-rose-500/30">Conflict</span></div>'
+                : ''}
+            </td>
+            <td class="py-3 px-3 text-[11px] font-medium text-[var(--app-foreground)] leading-snug">
+              ${esc(r.waiting_on || '-')}
+            </td>
+            <td class="py-3 px-3 text-[11px] text-[var(--app-foreground)] leading-relaxed">
+              ${esc(r.status)}
+            </td>
+          </tr>${detailRow}`;
+      }).join('');
+    }
+
+    function setDiffFilter(f) {
+      state.diffFilter = f;
+      renderDiffTab();
+    }
+
+    function renderDiffTab() {
+      const sn = currentSnap();
+      const prev = prevSnap();
+      const titleEl = document.getElementById('diffTitle');
+      if (!prev) {
+        titleEl.textContent = `Baseline Snapshot (${sn.date}) — No Earlier Report to Compare`;
+        document.getElementById('diffFilterBar').innerHTML = '';
+        document.getElementById('diffList').innerHTML =
+          '<p class="text-xs text-[var(--app-muted-foreground)] py-6 text-center">Select a later report date to inspect day-over-day PR updates.</p>';
+        return;
+      }
+
+      titleEl.textContent = `Changes from ${prev.date} (${prev.day_name || ''}) → ${sn.date} (${sn.day_name || ''})`;
+      const prevMap = {};
+      (prev.rows || []).forEach(r => { prevMap[r.number] = r; });
+
+      const items = [];
+      (sn.resolved_since_prev || []).forEach(res => items.push({
+        pr_id: res.pr_id, url: res.url, title: res.title, author: res.author,
+        change: res.change_type || 'Merged',
+        prevAct: res.prev_last_action, currAct: res.curr_last_action,
+        prevStatus: res.prev_status, currStatus: res.curr_status, waiting: 'Resolved'
+      }));
+      (sn.rows || []).forEach(r => {
+        const p = prevMap[r.number];
+        items.push({
+          pr_id: r.pr_id, url: r.url, title: r.title, author: r.author,
+          change: r.daily_change || 'Unchanged',
+          prevAct: p ? p.last_action_on : '—', currAct: r.last_action_on,
+          prevStatus: p ? p.status : 'Not in prior report',
+          currStatus: r.status, waiting: r.waiting_on
+        });
+      });
+
+      const filters = [
+        ['all', `All (${items.length})`],
+        ['Status Updated', `Updated (${items.filter(x => x.change === 'Status Updated').length})`],
+        ['New', `New (${items.filter(x => x.change === 'New').length})`],
+        ['resolved', `Merged/Closed (${(sn.resolved_since_prev || []).length})`],
+        ['Unchanged', `Unchanged (${items.filter(x => x.change === 'Unchanged').length})`]
+      ];
+      document.getElementById('diffFilterBar').innerHTML = filters.map(([k, lbl]) => `
+        <button type="button" onclick="setDiffFilter('${k}')"
+          class="px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${state.diffFilter === k
+            ? 'bg-[var(--app-primary)] text-[var(--app-primary-foreground)]'
+            : 'bg-[var(--app-muted)] text-[var(--app-muted-foreground)] hover:text-[var(--app-foreground)]'}">
+          ${esc(lbl)}
+        </button>`).join('');
+
+      const shown = items.filter(x => {
+        if (state.diffFilter === 'all') return true;
+        if (state.diffFilter === 'resolved') return x.change === 'Merged' || x.change === 'Closed' || x.change === 'Converted to Draft';
+        return x.change === state.diffFilter;
+      });
+
+      document.getElementById('diffList').innerHTML = shown.length ? shown.map(x => {
+        const bStyle = CHANGE_BADGE[x.change] || CHANGE_BADGE['Unchanged'];
+        return `
+          <div class="p-3.5 rounded-lg border border-[var(--app-border)] bg-[var(--app-background)]/50 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-blue-600 hover:underline">${esc(x.pr_id)} ↗</a>
+                <span class="px-2 py-0.5 rounded text-[10px] font-semibold border ${bStyle}">${esc(x.change)}</span>
+                <span class="text-xs font-semibold text-[var(--app-foreground)]">${esc(x.title)}</span>
+                <span class="text-[11px] font-mono text-[var(--app-muted-foreground)]">@${esc(x.author)}</span>
+              </div>
+              <span class="text-[11px] text-[var(--app-muted-foreground)]">Last action: ${esc(x.prevAct)} → <strong class="text-[var(--app-foreground)]">${esc(x.currAct)}</strong></span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+              <div class="p-2 rounded bg-[var(--app-muted)]/70 text-[var(--app-muted-foreground)]">
+                <span class="font-semibold uppercase text-[10px] block mb-0.5">Prior (${esc(prev.date)})</span>
+                ${esc(x.prevStatus)}
+              </div>
+              <div class="p-2 rounded bg-[var(--app-card)] border border-[var(--app-border)] text-[var(--app-foreground)]">
+                <span class="font-semibold uppercase text-[10px] text-[var(--app-primary)] block mb-0.5">Current (${esc(sn.date)}) · ${esc(x.waiting)}</span>
+                ${esc(x.currStatus)}
+              </div>
+            </div>
+          </div>`;
+      }).join('') : '<p class="text-xs text-[var(--app-muted-foreground)] py-6 text-center">No PRs in this category.</p>';
+    }
+
+    function renderReviewersTab() {
+      const revs = computeReviewers(currentSnap().rows || []);
+      const renderChips = (arr, cls) => arr.length ? arr.map(p =>
+        `<a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer" title="${esc(p.title)}"
+          class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold border ${cls} hover:opacity-80">${esc(p.pr_id)} ↗</a>`
+      ).join(' ') : '<span class="text-[11px] text-[var(--app-muted-foreground)]">None</span>';
+
+      document.getElementById('reviewerCardsGrid').innerHTML = revs.map(r => `
+        <div class="bg-[var(--app-card)] border border-[var(--app-border)] rounded-xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-[var(--app-foreground)]">${esc(r.name)}</h3>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${r.pending.length ? 'bg-blue-500/15 text-blue-600' : 'bg-emerald-500/15 text-emerald-600'}">
+              ${r.pending.length} Pending
+            </span>
+          </div>
+          <div class="space-y-2 text-xs">
+            <div>
+              <div class="text-[10px] font-semibold uppercase text-[var(--app-muted-foreground)] mb-1">Pending Review (Action Needed)</div>
+              <div class="flex flex-wrap gap-1.5">${renderChips(r.pending, 'bg-blue-500/15 text-blue-600 border-blue-500/30')}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-semibold uppercase text-[var(--app-muted-foreground)] mb-1">Changes / Comments Left</div>
+              <div class="flex flex-wrap gap-1.5">${renderChips(r.changes, 'bg-amber-500/15 text-amber-600 border-amber-500/30')}</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-semibold uppercase text-[var(--app-muted-foreground)] mb-1">Approved</div>
+              <div class="flex flex-wrap gap-1.5">${renderChips(r.approved, 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30')}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderChatTab() {
+      const sn = currentSnap();
+      const rows = sn.rows || [];
+      const res = sn.resolved_since_prev || [];
+      const lines = ['Hi Team,', `The Stale external PRs report (${sn.date} — ${rows.length} open):`, ''];
+      if (res.length) {
+        lines.push('Resolved since previous report : ' + res.map(x => `${x.pr_id} (${x.change_type})`).join(', '), '');
+      }
+      rows.forEach(r => {
+        lines.push(
+          `PR ID : [${r.pr_id}](${r.url})`,
+          `Title : ${r.title}`,
+          `Author : ${r.author}`,
+          `Created on : ${r.created_on}`,
+          `Last action taken on : ${r.last_action_on}`,
+          `Status : ${r.status}`,
+          ''
+        );
+      });
+      document.getElementById('chatTextarea').value = lines.join('\n').trim();
+    }
+
+    async function copyChatText() {
+      const ta = document.getElementById('chatTextarea');
+      const lbl = document.getElementById('copyChatLabel');
+      try {
+        await navigator.clipboard.writeText(ta.value);
+        lbl.textContent = 'Copied!';
+      } catch (e) {
+        ta.focus();
+        ta.select();
+        try { document.execCommand('copy'); lbl.textContent = 'Copied!'; }
+        catch (_) { lbl.textContent = 'Selected — Press Ctrl+C'; }
+      }
+      setTimeout(() => { lbl.textContent = 'Copy Chat Report'; }, 2200);
+    }
+
+    function renderAll() {
+      renderHeader();
+      renderKpis();
+      renderCategoryDonut();
+      renderTrendChart();
+      renderReviewerMini();
+      applyFilters();
+      renderDiffTab();
+      renderReviewersTab();
+      renderChatTab();
+    }
+
+    initDateSelect();
+    switchTab('overview');
+    renderAll();
+  </script>
+</body>
+</html>
