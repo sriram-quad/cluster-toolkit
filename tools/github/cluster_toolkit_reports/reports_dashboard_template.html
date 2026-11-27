@@ -201,21 +201,6 @@
         </div>
       </div>
 
-      <!-- Report Switcher Dropdown -->
-      <div class="space-y-1.5">
-        <label for="reportDropdown" class="block px-1 text-[10px] font-semibold uppercase tracking-wider" style="color: var(--text-muted);">
-          Pick Report
-        </label>
-        <select id="reportDropdown" onchange="selectTask(this.value)"
-          class="w-full px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/35"
-          style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
-          <option value="home">Overview — All Reports</option>
-          <option value="stale_prs">Stale External PRs</option>
-          <option value="code_scanning">Code Scanning (CodeQL)</option>
-          <option value="vulnerabilities">Security Vulnerabilities</option>
-        </select>
-      </div>
-
       <!-- Task Navigation -->
       <nav class="space-y-1" aria-label="Reports">
         <div class="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Reports</div>
@@ -233,7 +218,7 @@
           class="nav-item w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition">
           <span class="flex items-center gap-2.5 truncate">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
-            <span>Stale External PRs</span>
+            <span>External PRs</span>
           </span>
           <span id="navCountPr" class="nav-count text-[10px] px-1.5 py-0.5 rounded-md font-semibold tabular-nums"></span>
         </button>
@@ -251,7 +236,7 @@
           class="nav-item w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition">
           <span class="flex items-center gap-2.5 truncate">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            <span>Vulnerabilities</span>
+            <span class="truncate">Security Vulnerabilities</span>
           </span>
           <span id="navCountVuln" class="nav-count text-[10px] px-1.5 py-0.5 rounded-md font-semibold tabular-nums"></span>
         </button>
@@ -358,23 +343,45 @@
         <div id="prsub-tracker" class="space-y-5">
           <!-- Sticky-Header Triage Table with Avatars -->
           <div class="bento-card overflow-hidden">
-            <div class="px-5 py-3.5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-3" style="border-color: var(--border);">
-              <div class="flex flex-wrap items-center gap-2">
-                <div id="prAgeModeSeg" class="inline-flex p-0.5 rounded-xl" style="background-color: var(--bg-subtle); border: 1px solid var(--border);"></div>
-                <div id="prTypeSeg" class="inline-flex p-0.5 rounded-xl" style="background-color: var(--bg-subtle); border: 1px solid var(--border);"></div>
-                <div id="prFilterPills" class="flex flex-wrap items-center gap-1.5"></div>
+            <div class="px-5 py-3.5 border-b flex flex-col gap-3" style="border-color: var(--border);">
+              <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2">
+                  <div id="prAgeModeSeg" class="inline-flex p-0.5 rounded-xl" style="background-color: var(--bg-subtle); border: 1px solid var(--border);"></div>
+                  <div id="prTypeSeg" class="inline-flex p-0.5 rounded-xl" style="background-color: var(--bg-subtle); border: 1px solid var(--border);"></div>
+                  <div id="prFilterPills" class="flex flex-wrap items-center gap-1.5"></div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <select id="prSort" onchange="renderPrTable()"
+                    class="px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer focus:outline-none"
+                    style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
+                    <option value="days_open_desc">Sort: Oldest First</option>
+                    <option value="inactive_desc">Sort: Most Idle</option>
+                    <option value="updated_first">Sort: Changed Today</option>
+                    <option value="conflicts_first">Sort: Conflicts First</option>
+                    <option value="number_asc">Sort: PR #</option>
+                  </select>
+                  <span id="prCount" class="text-[11px] font-semibold tabular-nums pl-1" style="color: var(--text-secondary);"></span>
+                </div>
               </div>
-              <div class="flex flex-wrap items-center gap-2">
-                <select id="prSort" onchange="renderPrTable()"
-                  class="px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer focus:outline-none"
+              <!-- Person Filter Row: Author, Reviewer & Quick Person Search -->
+              <div class="flex flex-wrap items-center gap-2 text-xs">
+                <span class="text-[11px] font-semibold" style="color: var(--text-secondary);">Person:</span>
+                <select id="prAuthorFilter" onchange="setPrAuthor(this.value)"
+                  class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer focus:outline-none"
                   style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
-                  <option value="days_open_desc">Sort: Oldest First</option>
-                  <option value="inactive_desc">Sort: Most Idle</option>
-                  <option value="updated_first">Sort: Changed Today</option>
-                  <option value="conflicts_first">Sort: Conflicts First</option>
-                  <option value="number_asc">Sort: PR #</option>
+                  <option value="all">Author: All</option>
                 </select>
-                <span id="prCount" class="text-[11px] font-semibold tabular-nums pl-1" style="color: var(--text-secondary);"></span>
+                <select id="prReviewerFilter" onchange="setPrReviewerFilter(this.value)"
+                  class="px-2.5 py-1.5 rounded-xl text-[11px] font-semibold cursor-pointer focus:outline-none"
+                  style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
+                  <option value="all">Reviewer: All</option>
+                </select>
+                <div class="relative flex-1 min-w-[190px] max-w-[280px]">
+                  <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2" style="color:var(--text-muted);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  <input type="text" id="prPersonSearch" oninput="setPrPersonQuery(this.value)" placeholder="Search author or reviewer..."
+                    class="w-full pl-8 pr-3 py-1.5 text-[11px] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/35"
+                    style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
+                </div>
               </div>
             </div>
             <!-- Calendar Date Filter / Report Snapshot Row -->
@@ -434,6 +441,14 @@
               </div>
               <div class="flex flex-wrap items-center gap-2">
                 <div id="newestTypeSeg" class="inline-flex p-0.5 rounded-xl" style="background-color: var(--bg-subtle); border: 1px solid var(--border);"></div>
+                <select id="newestAuthorFilter" onchange="setNewestAuthor(this.value)"
+                  class="px-2.5 py-1.5 rounded-xl text-xs font-medium cursor-pointer focus:outline-none"
+                  style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
+                  <option value="all">Author: All</option>
+                </select>
+                <input type="text" id="newestPersonSearch" oninput="setNewestPersonQuery(this.value)" placeholder="Search author / reviewer..."
+                  class="px-3 py-1.5 text-xs rounded-xl w-44 focus:outline-none focus:ring-2 focus:ring-blue-500/35"
+                  style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
                 <select id="newestSort" onchange="renderNewestTable()"
                   class="px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer focus:outline-none"
                   style="background-color: var(--bg-subtle); color: var(--text-primary); border: 1px solid var(--border);">
@@ -782,9 +797,13 @@
       prAgeMode: 'stale14',
       prType: 'all',
       newestType: 'all',
+      newestAuthor: 'all',
+      newestPersonQuery: '',
       prKpi: 'all',
       prCat: 'all',
+      prAuthor: 'all',
       prRev: 'all',
+      prPersonQuery: '',
       queueScope: 'all',
       queueAge: 'all',
       prDateField: 'report_date',
@@ -1147,7 +1166,7 @@
       cal.draftTo = to || '';
 
       const titleMap = {
-        snap: 'Pick Stale PRs Report Date (5:00 PM Snapshots)',
+        snap: 'Pick External PRs Report Date (5:00 PM Snapshots)',
         cs_snap: 'Pick Code Scanning Report Date (Exact Historical View)',
         vuln_snap: 'Pick Security Vulnerabilities Report Date (As of Day)',
         pr: `Filter PRs in ${fmtPrettyIso(curSnap().date)} Report · ${st.prDateField === 'created' ? 'Created Date' : 'Last Activity'}`,
@@ -1595,10 +1614,6 @@
       document.getElementById('navCountPr').textContent = prN;
       document.getElementById('navCountCs').textContent = csN;
       document.getElementById('navCountVuln').textContent = vN;
-      const dd = document.getElementById('reportDropdown');
-      dd.options[1].text = `Stale External PRs (${prN})`;
-      dd.options[2].text = `Code Scanning (${csN})`;
-      dd.options[3].text = `Security Vulnerabilities (${vN})`;
     }
 
     function onGlobalSearch(val) {
@@ -1626,7 +1641,7 @@
       } else if (st.task === 'stale_prs') {
         const sn = curSnap();
         const isLat = st.snapIdx === SNAPS.length - 1;
-        L.innerHTML = `<h1 class="text-base font-bold tracking-tight" style="color:var(--text-primary);">Stale External PRs</h1>
+        L.innerHTML = `<h1 class="text-base font-bold tracking-tight" style="color:var(--text-primary);">External PRs</h1>
           <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold pill-blue">${(sn.rows || []).length} tracked</span>`;
         R.innerHTML = `${searchBox}
           <button type="button" id="snapCalBtn" onclick="openCalPopover('snap', this)" title="Pick any daily report snapshot date"
@@ -1683,7 +1698,6 @@
       closeCalPopover();
       st.task = task;
       st.search = '';
-      document.getElementById('reportDropdown').value = task;
       ['home', 'stale_prs', 'code_scanning', 'vulnerabilities'].forEach(v => document.getElementById('view-' + v).classList.toggle('hidden', v !== task));
 
       document.querySelectorAll('.nav-item').forEach(btn => {
@@ -1720,7 +1734,7 @@
 
       document.getElementById('homeKpis').innerHTML = [
         bentoKpiHtml({
-          label: 'Stale External PRs', val: prs.length, sub: `${prs.filter(r => r.contributor_type === 'External').length} External · ${prs.filter(r => r.contributor_type !== 'External').length} Quadrant`,
+          label: 'External PRs', val: prs.length, sub: `${prs.filter(r => r.contributor_type === 'External').length} External · ${prs.filter(r => r.contributor_type !== 'External').length} Quadrant`,
           delta: `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${prDelta > 0 ? 'pill-high' : 'pill-green'}">${prDelta >= 0 ? '+' + prDelta : prDelta}</span>`,
           spark: prTrend, color: '#2563eb', onclick: "selectTask('stale_prs')"
         }),
@@ -1783,9 +1797,9 @@
 
       // 3 Launch Cards
       const rCards = [
-        { id: 'stale_prs', title: 'Stale External PRs', val: prs.length, pill: 'pill-blue', meta: `${prConf} merge conflicts · ${prs.filter(isWaitRev).length} awaiting review`, desc: 'Track open external & Quadrant PRs aged 7+ days, reviewer queues, and day-over-day status changes.' },
+        { id: 'stale_prs', title: 'External PRs', val: prs.length, pill: 'pill-blue', meta: `${prConf} merge conflicts · ${prs.filter(isWaitRev).length} awaiting review`, desc: 'Track open external & Quadrant PRs, newest (< 14d) PRs, reviewer queues, and PR comments.' },
         { id: 'code_scanning', title: 'Code Scanning Alerts', val: csA.length, pill: 'pill-med', meta: `${csHi} High · ${csA.length - csHi} Medium · ${CS.main_open_count} on main`, desc: 'Inspect every live GitHub CodeQL finding with rule IDs, CWE tags, and exact file lines.' },
-        { id: 'vulnerabilities', title: 'Security Vulnerabilities', val: vA.length, pill: 'pill-high', meta: `${vCrit} Critical · ${vHi} High · ${(VULN.repo_advisories || []).length} repo advisory`, desc: 'Review each dependency CVE across Go & PyPI SBOM packages with fixed target versions.' }
+        { id: 'vulnerabilities', title: 'Security Vulnerabilities', val: vA.length, pill: 'pill-high', meta: `${vCrit} Critical · ${vHi} High · ${(VULN.repo_advisories || []).length} repo advisory`, desc: 'Review each dependency vulnerability across PyPI & Go packages with fixed target versions.' }
       ];
       document.getElementById('homeReportCards').innerHTML = rCards.map(c => `
         <button type="button" onclick="selectTask('${c.id}')" class="bento-interactive text-left p-5 flex flex-col justify-between gap-4">
@@ -1961,8 +1975,18 @@
     function jumpPrAgeBucket(key) {
       if (key === 'newest') { switchPrTab('newest'); renderPrView(); }
     }
+    function setPrAuthor(a) { st.prAuthor = a || 'all'; renderPrTable(); }
+    function setPrReviewerFilter(r) { st.prRev = r || 'all'; renderPrTable(); }
+    function setPrPersonQuery(q) { st.prPersonQuery = (q || '').trim().toLowerCase(); renderPrTable(); }
+    function setNewestAuthor(a) { st.newestAuthor = a || 'all'; renderNewestTable(); }
+    function setNewestPersonQuery(q) { st.newestPersonQuery = (q || '').trim().toLowerCase(); renderNewestTable(); }
     function setPrRev(r) { switchPrTab('tracker'); st.prRev = st.prRev === r ? 'all' : r; renderPrView(); }
-    function resetPrF() { st.prType = 'all'; st.prKpi = 'all'; st.prCat = 'all'; st.prRev = 'all'; renderPrView(); }
+    function resetPrF() {
+      st.prType = 'all'; st.prKpi = 'all'; st.prCat = 'all'; st.prAuthor = 'all'; st.prRev = 'all'; st.prPersonQuery = '';
+      const ps = document.getElementById('prPersonSearch');
+      if (ps) ps.value = '';
+      renderPrView();
+    }
 
     function computePrReviewers(rows) {
       const m = {};
@@ -2399,6 +2423,40 @@
         st.newestType, "st.newestType='__K__'; renderPrView()"
       );
 
+      // Populate Author & Reviewer person filter dropdowns dynamically from active PRs
+      const prAuthCounts = {}, prRevCounts = {};
+      activeRows.forEach(r => {
+        if (r.author) prAuthCounts[r.author] = (prAuthCounts[r.author] || 0) + 1;
+        const rSet = new Set();
+        [...(r.pending_list || []), ...(r.changes_req_list || []), ...(r.approved_list || [])].forEach(rv => {
+          if (rv && rv !== '-') rSet.add(rv);
+        });
+        rSet.forEach(rv => { prRevCounts[rv] = (prRevCounts[rv] || 0) + 1; });
+      });
+      if (st.prAuthor !== 'all' && !prAuthCounts[st.prAuthor]) st.prAuthor = 'all';
+      if (st.prRev !== 'all' && !prRevCounts[st.prRev]) st.prRev = 'all';
+      const authSel = document.getElementById('prAuthorFilter');
+      if (authSel) {
+        const sortedAuth = Object.entries(prAuthCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        authSel.innerHTML = `<option value="all">Author: All (${sortedAuth.length})</option>`
+          + sortedAuth.map(([a, c]) => `<option value="${esc(a)}" ${st.prAuthor === a ? 'selected' : ''}>${esc(a)} (${c})</option>`).join('');
+      }
+      const revSel = document.getElementById('prReviewerFilter');
+      if (revSel) {
+        const sortedRev = Object.entries(prRevCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        revSel.innerHTML = `<option value="all">Reviewer: All (${sortedRev.length})</option>`
+          + sortedRev.map(([rv, c]) => `<option value="${esc(rv)}" ${st.prRev === rv ? 'selected' : ''}>${esc(rv.replace(/^@/, ''))} (${c})</option>`).join('');
+      }
+      const newAuthCounts = {};
+      newestRows.forEach(r => { if (r.author) newAuthCounts[r.author] = (newAuthCounts[r.author] || 0) + 1; });
+      if (st.newestAuthor !== 'all' && !newAuthCounts[st.newestAuthor]) st.newestAuthor = 'all';
+      const newAuthSel = document.getElementById('newestAuthorFilter');
+      if (newAuthSel) {
+        const sortedNewA = Object.entries(newAuthCounts).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+        newAuthSel.innerHTML = `<option value="all">Author: All (${sortedNewA.length})</option>`
+          + sortedNewA.map(([a, c]) => `<option value="${esc(a)}" ${st.newestAuthor === a ? 'selected' : ''}>${esc(a)} (${c})</option>`).join('');
+      }
+
       renderPrDatePresets();
       renderPrTable();
       renderNewestTable();
@@ -2435,6 +2493,11 @@
       const sort = sortEl ? sortEl.value : 'newest_first';
       let list = base.filter(r => {
         if (st.newestType !== 'all' && r.contributor_type !== st.newestType) return false;
+        if (st.newestAuthor !== 'all' && r.author !== st.newestAuthor) return false;
+        if (st.newestPersonQuery) {
+          const personHay = [r.author, r.waiting_on, r.approvals, r.changes_requested, r.pending_reviewers].join(' ').toLowerCase();
+          if (!personHay.includes(st.newestPersonQuery)) return false;
+        }
         if (st.search && ![r.pr_id, r.title, r.author, r.category, r.waiting_on, r.status].join(' ').toLowerCase().includes(st.search)) return false;
         return true;
       });
@@ -2458,7 +2521,15 @@
         if (st.prType !== 'all' && r.contributor_type !== st.prType) return false;
         if (st.prKpi === 'reviewer' && !isWaitRev(r)) return false;
         if (st.prKpi === 'author' && !isBlkAuth(r)) return false;
-        if (st.prRev !== 'all' && !(r.pending_list || []).includes(st.prRev)) return false;
+        if (st.prAuthor !== 'all' && r.author !== st.prAuthor) return false;
+        if (st.prRev !== 'all') {
+          const revPool = [...(r.pending_list || []), ...(r.changes_req_list || []), ...(r.approved_list || [])];
+          if (!revPool.includes(st.prRev) && !(r.waiting_on || '').includes(st.prRev)) return false;
+        }
+        if (st.prPersonQuery) {
+          const personHay = [r.author, r.waiting_on, r.approvals, r.changes_requested, r.pending_reviewers].join(' ').toLowerCase();
+          if (!personHay.includes(st.prPersonQuery)) return false;
+        }
         if (st.prDateFrom || st.prDateTo) {
           const dtIso = st.prDateField === 'created'
             ? toIsoDate(r.created_iso, r.created_on)
@@ -2478,9 +2549,15 @@
         return (b.days_open || 0) - (a.days_open || 0);
       });
       document.getElementById('prCount').textContent = `${list.length} of ${baseRows.length}`;
+      const authSel = document.getElementById('prAuthorFilter');
+      if (authSel && authSel.value !== st.prAuthor) authSel.value = st.prAuthor;
+      const revSel = document.getElementById('prReviewerFilter');
+      if (revSel && revSel.value !== st.prRev) revSel.value = st.prRev;
       const pills = [];
       if (st.prKpi !== 'all') pills.push(st.prKpi === 'reviewer' ? 'Waiting on Reviewers' : 'Author Action / Conflicts');
+      if (st.prAuthor !== 'all') pills.push(`Author: ${st.prAuthor}`);
       if (st.prRev !== 'all') pills.push(`Reviewer: ${st.prRev.replace(/^@/, '')}`);
+      if (st.prPersonQuery) pills.push(`Person: "${st.prPersonQuery}"`);
       document.getElementById('prFilterPills').innerHTML = pills.length
         ? pills.map(p => `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold pill-blue">${esc(p)}</span>`).join('') + `<button type="button" onclick="resetPrF()" class="text-[11px] font-semibold text-rose-600 hover:underline pl-1">Clear</button>` : '';
 
