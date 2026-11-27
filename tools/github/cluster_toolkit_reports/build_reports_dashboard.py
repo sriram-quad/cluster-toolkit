@@ -64,12 +64,22 @@ def sanitize_snapshots(snapshots: list[dict]) -> list[dict]:
     return cleaned
 
 
+TOKEN_FILE = Path.home() / ".config" / "stale-pr-report" / "github_token"
+
+
 def load_gh_token() -> str:
-    """Resolve a GitHub token from env or non-interactive git credentials."""
+    """Resolve a GitHub token from env, token file, or non-interactive git credentials."""
     for env_key in ("GITHUB_TOKEN", "GH_TOKEN"):
         val = (os.environ.get(env_key) or "").strip()
         if val:
             return val
+    if TOKEN_FILE.exists():
+        try:
+            tok = TOKEN_FILE.read_text(encoding="utf-8").strip()
+            if tok:
+                return tok
+        except OSError:
+            pass
     env = dict(os.environ)
     env["GIT_TERMINAL_PROMPT"] = "0"
     try:
@@ -88,6 +98,133 @@ def load_gh_token() -> str:
     except (OSError, subprocess.SubprocessError):
         pass
     return ""
+
+
+def http_json_paginated(
+    url: str, headers: dict[str, str], max_pages: int = 10
+) -> list[dict]:
+    """Fetch paginated GitHub REST list endpoints following Link: rel='next'."""
+    out: list[dict] = []
+    next_url: str | None = url
+    pages = 0
+    while next_url and pages < max_pages:
+        pages += 1
+        req = urllib.request.Request(next_url, headers=headers, method="GET")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            batch = json.loads(resp.read().decode("utf-8"))
+            if isinstance(batch, list):
+                out.extend(batch)
+            link = resp.headers.get("Link") or ""
+            next_url = None
+            for part in link.split(","):
+                if 'rel="next"' in part:
+                    next_url = part.split(";")[0].strip().strip("<>")
+                    break
+    return out
+
+
+def fetch_dependabot_alerts(
+    repo: str, gh_headers: dict[str, str]
+) -> tuple[list[dict], list[dict]] | None:
+    """Tier 1: Fetch authoritative Dependabot alerts directly from GitHub API.
+
+    Returns (open_rows, all_rows) when authorized (requires `security_events`
+    classic scope, fine-grained `Dependabot alerts: Read`, or GitHub Actions
+    `security-events: read`), or None if HTTP 403/404.
+    """
+    eco_map = {
+        "pip": "PyPI",
+        "pypi": "PyPI",
+        "go": "Go",
+        "golang": "Go",
+        "npm": "npm",
+        "actions": "GitHub Actions",
+        "githubactions": "GitHub Actions",
+    }
+    sev_ord = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
+
+    try:
+        raw_open = http_json_paginated(
+            f"https://api.github.com/repos/{repo}/dependabot/alerts?state=open&per_page=100",
+            gh_headers,
+        )
+    except Exception:  # pylint: disable=broad-except
+        return None
+
+    raw_closed: list[dict] = []
+    for st_name in ("fixed", "dismissed", "auto_dismissed"):
+        try:
+            raw_closed.extend(
+                http_json_paginated(
+                    f"https://api.github.com/repos/{repo}/dependabot/alerts?state={st_name}&per_page=100",
+                    gh_headers,
+                    max_pages=4,
+                )
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    def to_row(alert: dict) -> dict:
+        dep = alert.get("dependency") or {}
+        pkg = dep.get("package") or {}
+        adv = alert.get("security_advisory") or {}
+        vuln = alert.get("security_vulnerability") or {}
+        raw_sev = (vuln.get("severity") or adv.get("severity") or "medium").lower()
+        sev = "Medium" if raw_sev == "moderate" else raw_sev.title()
+        if sev not in sev_ord:
+            sev = "Medium"
+        cve = adv.get("cve_id") or ""
+        ghsa = adv.get("ghsa_id") or ""
+        canonical = cve or ghsa or f"Dependabot-#{alert.get('number')}"
+        aliases = sorted({x for x in (cve, ghsa) if x})
+        eco_raw = (pkg.get("ecosystem") or "").lower()
+        fixed = (vuln.get("first_patched_version") or {}).get("identifier") or "Check advisory"
+        created_iso = (alert.get("created_at") or "")[:10]
+        closed_iso = (alert.get("fixed_at") or alert.get("dismissed_at") or "")[:10]
+        return {
+            "id": canonical,
+            "dependabot_number": alert.get("number"),
+            "primary_osv_id": ghsa or canonical,
+            "cve": cve,
+            "ghsa": ghsa,
+            "aliases": aliases,
+            "ecosystem": eco_map.get(eco_raw, pkg.get("ecosystem") or "Other"),
+            "package": pkg.get("name") or "",
+            "manifest_path": dep.get("manifest_path") or "",
+            "relationship": (dep.get("relationship") or "").title(),
+            "installed_version": vuln.get("vulnerable_version_range") or "vulnerable",
+            "fixed_version": fixed,
+            "severity": sev,
+            "cvss": (adv.get("cvss") or {}).get("score"),
+            "summary": (adv.get("summary") or f"Vulnerability {canonical}").strip(),
+            "details": (adv.get("description") or "").strip()[:500],
+            "published_on": (adv.get("published_at") or created_iso)[:10],
+            "created_iso": created_iso,
+            "closed_iso": closed_iso,
+            "state": (alert.get("state") or "open").lower(),
+            "url": alert.get("html_url")
+            or (f"https://github.com/advisories/{ghsa}" if ghsa else ""),
+            "source": "GitHub Dependabot API",
+        }
+
+    open_rows = sorted(
+        [to_row(a) for a in raw_open],
+        key=lambda x: (
+            sev_ord.get(x["severity"], 9),
+            x["ecosystem"],
+            x["package"],
+            -(x.get("dependabot_number") or 0),
+        ),
+    )
+    all_rows = sorted(
+        open_rows + [to_row(a) for a in raw_closed],
+        key=lambda x: (
+            x["state"] != "open",
+            sev_ord.get(x["severity"], 9),
+            -(x.get("dependabot_number") or 0),
+        ),
+    )
+    return open_rows, all_rows
 
 
 def http_json(url: str, headers: dict[str, str], body: dict | None = None):
@@ -332,8 +469,9 @@ def fetch_security_snapshot(
         "githubactions": "GitHub Actions",
         "npm": "npm",
     }
+    # Preserve per-manifest SPDXID entries so multi-manifest alerts match GitHub Dependabot 1-to-1.
     pkg_entries: list[dict] = []
-    seen_purls: set[str] = set()
+    unique_purls_set: set[str] = set()
     for pkg in sbom.get("packages") or []:
         ver = pkg.get("versionInfo")
         if not ver:
@@ -341,11 +479,12 @@ def fetch_security_snapshot(
         for ref in pkg.get("externalRefs") or []:
             if ref.get("referenceType") == "purl":
                 purl = ref.get("referenceLocator") or ""
-                if purl.startswith("pkg:") and purl not in seen_purls:
-                    seen_purls.add(purl)
+                if purl.startswith("pkg:"):
+                    unique_purls_set.add(purl)
                     eco_raw = purl.split(":")[1].split("/")[0]
                     pkg_entries.append(
                         {
+                            "spdx_id": pkg.get("SPDXID") or purl,
                             "purl": purl,
                             "name": pkg.get("name") or "",
                             "version": ver,
@@ -354,95 +493,111 @@ def fetch_security_snapshot(
                     )
                 break
 
-    osv_headers = {"Content-Type": "application/json", "User-Agent": "ctk-sec/1.0"}
-    raw_hits: list[tuple[dict, str]] = []
-    unique_vids: set[str] = set()
-    for i in range(0, len(pkg_entries), 200):
-        chunk = pkg_entries[i : i + 200]
-        res = http_json(
-            "https://api.osv.dev/v1/querybatch",
-            osv_headers,
-            body={"queries": [{"package": {"purl": e["purl"]}} for e in chunk]},
-        )
-        for entry, item in zip(chunk, res.get("results") or []):
-            for vuln in item.get("vulns") or []:
-                raw_hits.append((entry, vuln["id"]))
-                unique_vids.add(vuln["id"])
-
-    vuln_details: dict[str, dict] = {}
-
-    def fetch_osv(vid: str) -> tuple[str, dict | None]:
-        try:
-            url = f"https://api.osv.dev/v1/vulns/{urllib.parse.quote(vid)}"
-            return vid, http_json(url, {"User-Agent": "ctk-sec/1.0"})
-        except Exception:  # pylint: disable=broad-except
-            return vid, None
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
-        for vid, det in pool.map(fetch_osv, sorted(unique_vids)):
-            if det:
-                vuln_details[vid] = det
-
-    dedup_map: dict[tuple[str, str, str], dict] = {}
-    sev_rank = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
-    for entry, vid in raw_hits:
-        det = vuln_details.get(vid) or {}
-        aliases = [vid] + list(det.get("aliases") or [])
-        cves = sorted({a for a in aliases if a.startswith("CVE-")})
-        ghsas = sorted({a for a in aliases if a.startswith("GHSA-")})
-        go_ids = sorted({a for a in aliases if a.startswith("GO-")})
-        canonical = cves[0] if cves else (ghsas[0] if ghsas else vid)
-        key = (canonical, entry["name"], entry["version"])
-        sev, score = parse_cvss_score(det)
-        fixed_ver = extract_fixed_version(det, entry["name"])
-        summary = (det.get("summary") or "").strip()
-        if not summary:
-            lines = (det.get("details") or "").strip().splitlines()
-            summary = lines[0][:160] if lines else f"Vulnerability {canonical} in {entry['name']}"
-        if ghsas:
-            adv_url = f"https://github.com/advisories/{ghsas[0]}"
-        elif go_ids:
-            adv_url = f"https://pkg.go.dev/vuln/{go_ids[0]}"
-        else:
-            adv_url = f"https://osv.dev/vulnerability/{vid}"
-
-        existing = dedup_map.get(key)
-        if not existing:
-            dedup_map[key] = {
-                "id": canonical,
-                "primary_osv_id": vid,
-                "cve": cves[0] if cves else "",
-                "ghsa": ghsas[0] if ghsas else "",
-                "aliases": sorted(set(aliases)),
-                "ecosystem": entry["ecosystem"],
-                "package": entry["name"],
-                "installed_version": entry["version"],
-                "fixed_version": fixed_ver,
-                "severity": sev,
-                "cvss": score,
-                "summary": summary,
-                "details": (det.get("details") or "").strip()[:500],
-                "published_on": (det.get("published") or "")[:10],
-                "url": adv_url,
-                "source": "SBOM + OSV.dev",
-            }
-        else:
-            existing["aliases"] = sorted(set(existing["aliases"] + aliases))
-            if sev_rank.get(sev, 0) > sev_rank.get(existing["severity"], 0):
-                existing["severity"] = sev
-            if existing["fixed_version"] == "Check advisory" and fixed_ver != "Check advisory":
-                existing["fixed_version"] = fixed_ver
-            if not existing["ghsa"] and ghsas:
-                existing["ghsa"] = ghsas[0]
-                existing["url"] = f"https://github.com/advisories/{ghsas[0]}"
-            if not existing["cve"] and cves:
-                existing["cve"] = cves[0]
-
     sev_ord = {"Critical": 0, "High": 1, "Medium": 2, "Low": 3}
-    vuln_rows = sorted(
-        dedup_map.values(),
-        key=lambda x: (sev_ord.get(x["severity"], 9), x["ecosystem"], x["package"], x["id"]),
-    )
+    vuln_all_rows: list[dict] = []
+    vuln_source = "GitHub Dependabot API"
+
+    dep_result = fetch_dependabot_alerts(repo, gh_headers)
+    if dep_result is not None:
+        vuln_rows, vuln_all_rows = dep_result
+    else:
+        vuln_source = "GitHub SBOM + GHSA Advisory DB"
+        osv_headers = {"Content-Type": "application/json", "User-Agent": "ctk-sec/1.0"}
+        unique_purls = sorted(unique_purls_set)
+        purl_to_vids: dict[str, list[str]] = {}
+        unique_vids: set[str] = set()
+        for i in range(0, len(unique_purls), 200):
+            chunk = unique_purls[i : i + 200]
+            res = http_json(
+                "https://api.osv.dev/v1/querybatch",
+                osv_headers,
+                body={"queries": [{"package": {"purl": u}} for u in chunk]},
+            )
+            for purl, item in zip(chunk, res.get("results") or []):
+                vids = [vuln["id"] for vuln in (item.get("vulns") or [])]
+                if vids:
+                    purl_to_vids[purl] = vids
+                    unique_vids.update(vids)
+
+        vuln_details: dict[str, dict] = {}
+
+        def fetch_osv(vid: str) -> tuple[str, dict | None]:
+            try:
+                url = f"https://api.osv.dev/v1/vulns/{urllib.parse.quote(vid)}"
+                return vid, http_json(url, {"User-Agent": "ctk-sec/1.0"})
+            except Exception:  # pylint: disable=broad-except
+                return vid, None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=12) as pool:
+            for vid, det in pool.map(fetch_osv, sorted(unique_vids)):
+                if det:
+                    vuln_details[vid] = det
+
+        # Match GitHub Dependabot: require a GitHub Advisory (GHSA-*) and deduplicate per (GHSA, SPDXID).
+        dedup_map: dict[tuple[str, str], dict] = {}
+        sev_rank = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
+        for entry in pkg_entries:
+            for vid in purl_to_vids.get(entry["purl"], []):
+                det = vuln_details.get(vid) or {}
+                aliases = [vid] + list(det.get("aliases") or [])
+                ghsas = sorted({a for a in aliases if a.startswith("GHSA-")})
+                if not ghsas:
+                    continue
+                cves = sorted({a for a in aliases if a.startswith("CVE-")})
+                canonical = cves[0] if cves else ghsas[0]
+                key = (ghsas[0], entry["spdx_id"])
+                sev, score = parse_cvss_score(det)
+                fixed_ver = extract_fixed_version(det, entry["name"])
+                summary = (det.get("summary") or "").strip()
+                if not summary:
+                    lines = (det.get("details") or "").strip().splitlines()
+                    summary = (
+                        lines[0][:160]
+                        if lines
+                        else f"Vulnerability {canonical} in {entry['name']}"
+                    )
+                adv_url = f"https://github.com/advisories/{ghsas[0]}"
+
+                existing = dedup_map.get(key)
+                if not existing:
+                    dedup_map[key] = {
+                        "id": canonical,
+                        "primary_osv_id": vid,
+                        "cve": cves[0] if cves else "",
+                        "ghsa": ghsas[0],
+                        "aliases": sorted(set(aliases)),
+                        "ecosystem": entry["ecosystem"],
+                        "package": entry["name"],
+                        "installed_version": entry["version"],
+                        "fixed_version": fixed_ver,
+                        "severity": sev,
+                        "cvss": score,
+                        "summary": summary,
+                        "details": (det.get("details") or "").strip()[:500],
+                        "published_on": (det.get("published") or "")[:10],
+                        "url": adv_url,
+                        "source": vuln_source,
+                    }
+                else:
+                    existing["aliases"] = sorted(set(existing["aliases"] + aliases))
+                    if sev_rank.get(sev, 0) > sev_rank.get(existing["severity"], 0):
+                        existing["severity"] = sev
+                    if existing["fixed_version"] == "Check advisory" and fixed_ver != "Check advisory":
+                        existing["fixed_version"] = fixed_ver
+                    if not existing["cve"] and cves:
+                        existing["cve"] = cves[0]
+                        existing["id"] = cves[0]
+
+        vuln_rows = sorted(
+            dedup_map.values(),
+            key=lambda x: (
+                sev_ord.get(x["severity"], 9),
+                x["ecosystem"],
+                x["package"],
+                x["id"],
+            ),
+        )
+
     latest_at = analyses[0].get("created_at", "") if analyses else ""
     return {
         "repo": repo,
@@ -461,9 +616,11 @@ def fetch_security_snapshot(
         },
         "vulnerabilities": {
             "open_count": len(vuln_rows),
-            "sbom_packages_scanned": len(pkg_entries),
+            "sbom_packages_scanned": len(unique_purls_set),
+            "source": vuln_source,
             "repo_advisories": repo_advisories,
             "alerts": vuln_rows,
+            "all_alerts": vuln_all_rows,
         },
     }
 

@@ -352,41 +352,11 @@
             <button type="button" data-prtab="reviewers" onclick="switchPrTab('reviewers')" class="pr-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">Action Queue (Reviewers &amp; Authors)</button>
             <button type="button" data-prtab="chat" onclick="switchPrTab('chat')" class="pr-tab px-3.5 py-1.5 rounded-lg text-xs font-semibold transition">Chat Alert</button>
           </div>
-          <button type="button" id="prChartsBtn" onclick="togglePrCharts()"
-            class="px-3 py-1.5 rounded-xl text-xs font-medium transition"
-            style="background-color: var(--bg-surface); color: var(--text-secondary); border: 1px solid var(--border);">Hide Charts</button>
         </div>
 
         <!-- Sub-View: PR Tracker -->
         <div id="prsub-tracker" class="space-y-5">
-          <!-- Row 2: 60/40 Bento Charts -->
-          <div id="prChartsRow" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div class="lg:col-span-7 bento-card p-5 flex flex-col justify-between">
-              <div class="flex items-center justify-between mb-3">
-                <div>
-                  <h2 class="text-sm font-semibold" style="color: var(--text-primary);">Daily Stale PR Trend</h2>
-                  <p class="text-[11px]" style="color: var(--text-secondary);">Click any snapshot bar to switch report date</p>
-                </div>
-                <div class="flex items-center gap-3 text-[11px]" style="color: var(--text-secondary);">
-                  <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-blue-600"></span>External</span>
-                  <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-indigo-400"></span>Quadrant</span>
-                </div>
-              </div>
-              <div id="prTrendBars" class="flex items-end min-h-[126px]"></div>
-            </div>
-
-            <div class="lg:col-span-5 bento-card p-5 flex flex-col justify-between">
-              <div class="flex items-center justify-between mb-2">
-                <div>
-                  <h2 class="text-sm font-semibold" style="color: var(--text-primary);">PR Aging Buckets</h2>
-                  <p class="text-[11px]" style="color: var(--text-secondary);">Open stale PRs grouped by age</p>
-                </div>
-              </div>
-              <div id="prAgeDonut" class="flex-1 flex items-center gap-5"></div>
-            </div>
-          </div>
-
-          <!-- Row 3: Sticky-Header Triage Table with Avatars -->
+          <!-- Sticky-Header Triage Table with Avatars -->
           <div class="bento-card overflow-hidden">
             <div class="px-5 py-3.5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-3" style="border-color: var(--border);">
               <div class="flex flex-wrap items-center gap-2">
@@ -574,26 +544,6 @@
       <section id="view-code_scanning" class="hidden space-y-5">
         <div id="csKpis" class="grid grid-cols-2 lg:grid-cols-4 gap-5"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div class="lg:col-span-7 bento-card p-5">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <h2 class="text-sm font-semibold">Alerts by CodeQL Rule</h2>
-                <p class="text-[11px]" style="color: var(--text-secondary);">Click any rule to filter findings below</p>
-              </div>
-              <span id="csLastRun" class="text-[11px] font-mono" style="color: var(--text-secondary);"></span>
-            </div>
-            <div id="csRuleBars" class="space-y-2.5"></div>
-          </div>
-          <div class="lg:col-span-5 bento-card p-5 flex flex-col justify-between">
-            <div class="mb-2">
-              <h2 class="text-sm font-semibold">Codebase Area &amp; Severity</h2>
-              <p class="text-[11px]" style="color: var(--text-secondary);">Distribution across repository directories</p>
-            </div>
-            <div id="csDonut" class="flex-1 flex items-center gap-5"></div>
-          </div>
-        </div>
-
         <div class="bento-card overflow-hidden">
           <div class="px-5 py-3.5 border-b flex flex-col lg:flex-row lg:items-center justify-between gap-3" style="border-color: var(--border);">
             <div class="flex flex-wrap items-center gap-2">
@@ -660,28 +610,9 @@
       <section id="view-vulnerabilities" class="hidden space-y-5">
         <div id="vulnKpis" class="grid grid-cols-2 lg:grid-cols-4 gap-5"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          <div class="lg:col-span-7 bento-card p-5">
-            <div class="flex items-center justify-between mb-3">
-              <div>
-                <h2 class="text-sm font-semibold">Most Affected Packages</h2>
-                <p class="text-[11px]" style="color: var(--text-secondary);">Click any package to filter its CVEs — 1 upgrade clears multiple advisories</p>
-              </div>
-              <span id="vulnSbomPill" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold pill-slate"></span>
-            </div>
-            <div id="vulnPkgGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5"></div>
-          </div>
-
-          <div class="lg:col-span-5 bento-card p-5 flex flex-col justify-between gap-4">
-            <div>
-              <h2 class="text-sm font-semibold mb-2">Severity Distribution</h2>
-              <div id="vulnDonut" class="flex items-center gap-5"></div>
-            </div>
-            <div class="pt-3 border-t space-y-1.5" style="border-color: var(--border);">
-              <div class="text-[10px] font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Published Repo Security Advisory</div>
-              <div id="vulnRepoAdv"></div>
-            </div>
-          </div>
+        <div id="vulnRepoAdvWrap" class="hidden bento-card px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+          <span class="text-[10px] font-semibold uppercase tracking-wider shrink-0" style="color: var(--text-muted);">Published Repo Advisory</span>
+          <div id="vulnRepoAdv" class="flex-1 min-w-0"></div>
         </div>
 
         <div class="bento-card overflow-hidden">
@@ -1664,7 +1595,6 @@
       document.getElementById('navCountPr').textContent = prN;
       document.getElementById('navCountCs').textContent = csN;
       document.getElementById('navCountVuln').textContent = vN;
-      document.getElementById('vulnSbomPill').textContent = `${VULN.sbom_packages_scanned || 0} SBOM pkgs`;
       const dd = document.getElementById('reportDropdown');
       dd.options[1].text = `Stale External PRs (${prN})`;
       dd.options[2].text = `Code Scanning (${csN})`;
@@ -1744,7 +1674,7 @@
             <span class="opacity-70">▾</span>
           </button>
           <button type="button" onclick="copyVulnSummary(this)" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition" style="background-color:var(--bg-subtle); color:var(--text-primary); border:1px solid var(--border);">Copy Report</button>
-          <a href="https://github.com/GoogleCloudPlatform/cluster-toolkit/security/advisories" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white shadow-sm hover:opacity-95 transition" style="background-color:var(--accent);">Advisories ↗</a>`;
+          <a href="https://github.com/GoogleCloudPlatform/cluster-toolkit/security/dependabot" target="_blank" rel="noopener noreferrer" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white shadow-sm hover:opacity-95 transition" style="background-color:var(--accent);">GitHub Dependabot ↗</a>`;
       }
     }
 
@@ -2010,15 +1940,9 @@
       st.prDiffToIdx = parseInt(document.getElementById('prDiffTo').value, 10) || 0;
       renderPrDiff();
     }
-    function togglePrCharts() {
-      st.prCharts = !st.prCharts;
-      document.getElementById('prChartsRow').classList.toggle('hidden', !st.prCharts);
-      document.getElementById('prChartsBtn').textContent = st.prCharts ? 'Hide Charts' : 'Show Charts';
-    }
     function switchPrTab(tab) {
       st.prTab = tab;
       ['tracker', 'newest', 'diff', 'reviewers', 'chat'].forEach(t => document.getElementById('prsub-' + t).classList.toggle('hidden', t !== tab));
-      document.getElementById('prChartsBtn').classList.toggle('hidden', tab !== 'tracker');
       document.querySelectorAll('.pr-tab').forEach(b => {
         const on = b.getAttribute('data-prtab') === tab;
         b.style.backgroundColor = on ? 'var(--bg-active)' : 'transparent';
@@ -2461,32 +2385,6 @@
         bentoKpiHtml({ label: 'Waiting on Reviewers', val: revN, sub: 'Review, re-review & 2nd LGTM', progress: Math.round((revN / Math.max(1, activeRows.length)) * 100), color: '#4f46e5', active: st.prTab === 'tracker' && st.prKpi === 'reviewer', onclick: "setPrKpi('reviewer')" }),
         bentoKpiHtml({ label: 'Author Action / Conflicts', val: blkN, sub: `${confN} with merge conflicts`, progress: Math.round((blkN / Math.max(1, activeRows.length)) * 100), color: confN ? '#e11d48' : '#d97706', active: st.prTab === 'tracker' && st.prKpi === 'author', onclick: "setPrKpi('author')" })
       ].join('');
-
-      // Stacked Trend Bars
-      const recent = SNAPS.slice(-10);
-      const maxV = Math.max(1, ...recent.map(s => (s.rows || []).length));
-      document.getElementById('prTrendBars').innerHTML = `<div class="w-full flex items-end justify-around gap-3">` + recent.map(s => {
-        const idx = SNAPS.indexOf(s), sr = s.rows || [];
-        const e = sr.filter(r => r.contributor_type === 'External').length, q = sr.length - e;
-        const cur = idx === st.snapIdx;
-        return `<button type="button" onclick="onPrDateChange('${idx}')" class="flex-1 max-w-[56px] flex flex-col items-center gap-1.5">
-          <span class="text-xs font-bold tabular-nums" style="color:${cur ? 'var(--accent)' : 'var(--text-primary)'};">${sr.length}</span>
-          <div class="w-full max-w-[34px] h-24 flex flex-col justify-end rounded-t-lg overflow-hidden transition" style="background-color:var(--bg-subtle); ${cur ? 'box-shadow:0 0 0 2px var(--accent);' : 'opacity:0.8;'}">
-            ${q > 0 ? `<div class="w-full" style="height:${Math.round((q / maxV) * 100)}%; background:#818cf8;"></div>` : ''}
-            ${e > 0 ? `<div class="w-full" style="height:${Math.round((e / maxV) * 100)}%; background:#2563eb;"></div>` : ''}
-          </div>
-          <span class="text-[10px] tabular-nums" style="color:${cur ? 'var(--text-primary)' : 'var(--text-secondary)'}; font-weight:${cur ? '600' : '400'};">${esc(s.date.slice(5))}</span>
-        </button>`;
-      }).join('') + `</div>`;
-
-      // PR Age Buckets Radial Donut (includes <14d Newest clickable straight to Newest tab!)
-      const bkts = [
-        { key: 'newest', label: '< 14d (Newest)', val: newestRows.length, color: '#10b981' },
-        { key: '', label: '14–30 days', val: stale14Rows.filter(r => r.days_open <= 30).length, color: '#2563eb' },
-        { key: '', label: '31–45 days', val: stale14Rows.filter(r => r.days_open >= 31 && r.days_open <= 45).length, color: '#f59e0b' },
-        { key: '', label: '45+ days', val: stale14Rows.filter(r => r.days_open > 45).length, color: '#e11d48' }
-      ].filter(b => b.val > 0);
-      document.getElementById('prAgeDonut').innerHTML = donutRingHtml(bkts, stale14Rows.length + newestRows.length, 'total PRs', 'jumpPrAgeBucket');
 
       document.getElementById('prAgeModeSeg').innerHTML = segHtml(
         [['stale14', `Stale 14d+ (${stale14Rows.length})`], ['all7', `All Tracked (${filterPrRowsByDate(allSnapRows).length})`]],
@@ -3044,7 +2942,6 @@
       const devN = alerts.filter(a => (a.branches || '').includes('develop')).length;
       const totH = alerts.length + closedStats.fixed + closedStats.dismissed;
       const fixPct = Math.round((closedStats.fixed / Math.max(1, totH)) * 100);
-      document.getElementById('csLastRun').textContent = (isHistDate || isExactDay) ? `${isExactDay ? 'Day Activity' : 'As of'} ${fmtPrettyIso(activeDt)}` : (CS.latest_analysis_at || '');
 
       document.getElementById('csKpis').innerHTML = [
         bentoKpiHtml({
@@ -3064,30 +2961,6 @@
         bentoKpiHtml({ label: 'Medium Severity', val: med, sub: 'HTML injection, jQuery & socket', progress: Math.round((med / Math.max(1, alerts.length)) * 100), color: '#d97706', active: st.csSev === 'Medium', onclick: "st.csSev='Medium'; renderCsView()" }),
         bentoKpiHtml({ label: isHistDate ? 'Fixed (Up to Date)' : 'Historical Fixed', val: closedStats.fixed, sub: `${fixPct}% fixed · ${closedStats.dismissed} dismissed`, delta: `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold pill-green">${fixPct}%</span>`, progress: fixPct, color: '#059669' })
       ].join('');
-
-      const rmap = {};
-      alerts.forEach(a => { if (!rmap[a.rule_id]) rmap[a.rule_id] = { id: a.rule_id, name: a.rule_name, sev: a.severity, n: 0 }; rmap[a.rule_id].n++; });
-      const rArr = Object.values(rmap).sort((a, b) => b.n - a.n);
-      const maxR = Math.max(1, ...rArr.map(r => r.n));
-      document.getElementById('csRuleBars').innerHTML = rArr.length ? rArr.map(r => {
-        const sm = SEV[r.sev] || SEV.Medium;
-        return `<button type="button" data-r="${esc(r.id)}" onclick="setCsRule(this.getAttribute('data-r'))"
-          class="t-row w-full text-left p-2.5 rounded-xl" style="${st.csRule === r.id ? 'background-color:var(--bg-active);' : ''}">
-          <div class="flex items-center justify-between text-xs mb-1.5 gap-2">
-            <span class="font-medium truncate">${esc(r.name)} <span class="font-mono text-[10px]" style="color:var(--text-muted);">${esc(r.id)}</span></span>
-            <span class="font-bold tabular-nums shrink-0" style="color:${sm.color};">${r.n}</span>
-          </div>
-          <div class="w-full h-1.5 rounded-full overflow-hidden" style="background-color:var(--bg-subtle);"><div class="h-full rounded-full" style="width:${Math.round((r.n / maxR) * 100)}%; background:${sm.color};"></div></div>
-        </button>`;
-      }).join('') : `<div class="py-6 text-center text-xs space-y-2" style="color:var(--text-secondary);"><div>${isExactDay ? `0 CodeQL changes on ${esc(fmtPrettyIso(activeDt))} (${getCsAlertsAsOf(activeDt).length} alerts remained open).` : 'No CodeQL alerts active on this date.'}</div><button type="button" onclick="${isExactDay ? `setCsReportDate('${activeDt}', 'report_date')` : 'clearCsToolbarDate()'}" class="px-3 py-1 rounded-lg font-semibold pill-blue">${isExactDay ? `Show All ${getCsAlertsAsOf(activeDt).length} Open on ${esc(fmtPrettyIso(activeDt))}` : 'Show Latest Report'}</button></div>`;
-
-      const amap = {};
-      alerts.forEach(a => { amap[a.area] = (amap[a.area] || 0) + 1; });
-      const cols = ['#2563eb', '#6366f1', '#0ea5e9', '#10b981'];
-      const aEntries = Object.entries(amap).sort((a, b) => b[1] - a[1]).map(([k, v], i) => ({ key: k, label: k, val: v, color: cols[i % cols.length] }));
-      document.getElementById('csDonut').innerHTML = aEntries.length
-        ? donutRingHtml(aEntries, alerts.length, 'alerts', 'setCsArea')
-        : `<div class="w-full py-6 text-center text-xs" style="color:var(--text-secondary);">${isExactDay ? `0 changes on ${esc(fmtPrettyIso(activeDt))} (${getCsAlertsAsOf(activeDt).length} open)` : '0 alerts on this date'}</div>`;
 
       document.getElementById('csSevSeg').innerHTML = segHtml(
         [['all', `All (${alerts.length})`], ['High', `High (${hi})`], ['Medium', `Medium (${med})`]],
@@ -3152,29 +3025,43 @@
     function getVulnLatestDate() { return SEC.generated_date || '2026-11-27'; }
     function getVulnActiveReportDate() { return st.vulnReportDate || getVulnLatestDate(); }
 
+    function getVulnPool() {
+      return (VULN.all_alerts && VULN.all_alerts.length) ? VULN.all_alerts : (VULN.alerts || []);
+    }
+
     function getVulnIndexedAsOf(dateIso) {
-      const all = (VULN.alerts || []).map((v, i) => ({ v, i }));
       const lat = getVulnLatestDate();
-      if (!dateIso || dateIso >= lat) return all;
-      return all.filter(({ v }) => {
-        const iso = toIsoDate(v.published_on, '');
-        return iso && iso <= dateIso;
+      if (!dateIso || dateIso >= lat) {
+        return (VULN.alerts || []).map((v, i) => ({ v, i }));
+      }
+      const hasLifecycle = Boolean(VULN.all_alerts && VULN.all_alerts.length);
+      const pool = getVulnPool().map((v, i) => ({ v, i }));
+      return pool.filter(({ v }) => {
+        const opened = toIsoDate(v.created_iso || v.published_on, '');
+        if (!opened || opened > dateIso) return false;
+        if (hasLifecycle && v.closed_iso && v.closed_iso <= dateIso) return false;
+        return true;
       });
     }
 
     function getVulnIndexedOnDay(dateIso) {
-      return (VULN.alerts || []).map((v, i) => ({ v, i })).filter(({ v }) => toIsoDate(v.published_on, '') === dateIso);
+      const hasLifecycle = Boolean(VULN.all_alerts && VULN.all_alerts.length);
+      return getVulnPool().map((v, i) => ({ v, i })).filter(({ v }) => {
+        const opened = toIsoDate(v.created_iso || v.published_on, '');
+        return opened === dateIso || (hasLifecycle && v.closed_iso && v.closed_iso === dateIso);
+      });
     }
 
     function getVulnMilestones() {
       const lat = getVulnLatestDate();
       const dayCounts = {};
-      (VULN.alerts || []).forEach(v => {
-        const p = toIsoDate(v.published_on, '');
+      getVulnPool().forEach(v => {
+        const p = toIsoDate(v.created_iso || v.published_on, '');
         if (p && p <= lat) dayCounts[p] = (dayCounts[p] || 0) + 1;
+        if (v.closed_iso && v.closed_iso <= lat) dayCounts[v.closed_iso] = (dayCounts[v.closed_iso] || 0) + 1;
       });
       const latTot = getVulnIndexedAsOf(lat).length;
-      const out = [{ date: lat, count: latTot, added: dayCounts[lat] || 0, tag: `${latTot} CVEs` }];
+      const out = [{ date: lat, count: latTot, added: dayCounts[lat] || 0, tag: `${latTot} alerts` }];
       const sorted = Object.keys(dayCounts).filter(d => d !== lat).sort().reverse();
       for (const d of sorted) {
         const cum = getVulnIndexedAsOf(d).length;
@@ -3301,23 +3188,25 @@
     function resetVulnF() { st.vEco = 'all'; st.vPkg = 'all'; document.getElementById('vulnSev').value = 'all'; renderVulnView(); }
 
     function openVulnDrawer(idx) {
-      const v = (VULN.alerts || [])[idx];
+      const v = getVulnPool()[idx] || (VULN.alerts || [])[idx];
       if (!v) return;
       const sm = SEV[v.severity] || SEV.Medium;
+      const numBadge = v.dependabot_number ? `<span class="px-2 py-0.5 rounded-full font-mono text-[10px] font-semibold pill-slate">#${esc(v.dependabot_number)}</span>` : '';
       openDrawer(
-        `<div class="flex items-center gap-2"><span class="font-mono font-bold text-sm">${esc(v.id)}</span><span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${sm.pill}">${esc(v.severity)}</span></div>
-         <div class="text-xs font-mono mt-1" style="color:var(--text-secondary);">${esc(v.ecosystem)} · ${esc(v.package)}</div>`,
+        `<div class="flex items-center gap-2 flex-wrap"><span class="font-mono font-bold text-sm">${esc(v.id)}</span>${numBadge}<span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${sm.pill}">${esc(v.severity)}</span></div>
+         <div class="text-xs font-mono mt-1" style="color:var(--text-secondary);">${esc(v.ecosystem)} · ${esc(v.package)}${v.relationship ? ` · ${esc(v.relationship)}` : ''}</div>`,
         `<div class="p-4 rounded-xl space-y-1" style="background-color:var(--bg-subtle);"><div class="text-[10px] font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Summary</div><div class="text-xs font-medium leading-relaxed">${esc(v.summary)}</div></div>
+         ${v.manifest_path ? `<div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">Manifest File</div><div class="font-mono text-[11px] font-semibold mt-0.5 break-all">${esc(v.manifest_path)}</div></div>` : ''}
          <div class="grid grid-cols-2 gap-3">
-           <div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">Installed</div><div class="font-mono font-bold mt-0.5 text-rose-600">${esc(v.installed_version)}</div></div>
+           <div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">Installed / Vulnerable</div><div class="font-mono font-bold mt-0.5 text-rose-600">${esc(v.installed_version)}</div></div>
            <div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">Fixed Version</div><div class="font-mono font-bold mt-0.5 text-emerald-600">${esc(v.fixed_version)}</div></div>
-           <div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">Published</div><div class="font-semibold mt-0.5">${esc(v.published_on || '-')}</div></div>
-           <div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">Source</div><div class="font-semibold mt-0.5">${esc(v.source || 'SBOM + OSV.dev')}</div></div>
+           <div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">${v.created_iso ? 'Opened' : 'Published'}</div><div class="font-semibold mt-0.5">${esc(v.created_iso || v.published_on || '-')}</div></div>
+           <div class="p-3.5 rounded-xl border" style="border-color:var(--border);"><div class="text-[10px]" style="color:var(--text-muted);">Source</div><div class="font-semibold mt-0.5">${esc(v.source || 'GitHub Advisory DB')}</div></div>
          </div>
          ${v.details ? `<div class="p-4 rounded-xl border space-y-1" style="border-color:var(--border);"><div class="text-[10px] font-semibold uppercase tracking-wider" style="color:var(--text-muted);">Details</div><div class="text-[11px] leading-relaxed whitespace-pre-line" style="color:var(--text-secondary);">${esc(v.details)}</div></div>` : ''}
          <div class="pt-2 border-t text-[11px]" style="border-color:var(--border);"><div class="font-semibold mb-1.5" style="color:var(--text-secondary);">Aliases</div><div class="flex flex-wrap gap-1.5">${(v.aliases || []).map(a => `<span class="px-2 py-0.5 rounded-full font-mono text-[10px] pill-slate">${esc(a)}</span>`).join('')}</div></div>`,
         `<span class="text-[11px] font-mono" style="color:var(--text-secondary);">${esc(v.package)}</span>
-         <a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl text-xs font-semibold text-white hover:opacity-95 transition" style="background-color:var(--accent);">Verify Advisory ↗</a>`
+         <a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer" class="px-4 py-2 rounded-xl text-xs font-semibold text-white hover:opacity-95 transition" style="background-color:var(--accent);">Verify on GitHub ↗</a>`
       );
     }
 
@@ -3377,26 +3266,8 @@
         bentoKpiHtml({ label: 'Medium & Low', val: (sevs.Medium || 0) + (sevs.Low || 0), sub: `${sevs.Medium || 0} Medium · ${sevs.Low || 0} Low`, progress: Math.round((((sevs.Medium || 0) + (sevs.Low || 0)) / Math.max(1, alerts.length)) * 100), color: '#d97706', active: curSev === 'Medium', onclick: "document.getElementById('vulnSev').value='Medium'; renderVulnView()" })
       ].join('');
 
-      const pmap = {}, ord = { Critical: 0, High: 1, Medium: 2, Low: 3 };
-      alerts.forEach(v => {
-        if (!pmap[v.package]) pmap[v.package] = { pkg: v.package, n: 0, top: v.severity };
-        pmap[v.package].n++;
-        if ((ord[v.severity] ?? 9) < (ord[pmap[v.package].top] ?? 9)) pmap[v.package].top = v.severity;
-      });
-      const topPkgs = Object.values(pmap).sort((a, b) => b.n - a.n).slice(0, 8);
-      document.getElementById('vulnPkgGrid').innerHTML = topPkgs.length ? topPkgs.map(p => `
-        <button type="button" data-p="${esc(p.pkg)}" onclick="setVulnPkg(this.getAttribute('data-p'))"
-          class="t-row flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-xs"
-          style="background-color:${st.vPkg === p.pkg ? 'var(--bg-active)' : 'var(--bg-subtle)'};">
-          <span class="flex items-center gap-2 min-w-0"><span class="w-2 h-2 rounded-full shrink-0" style="background:${(SEV[p.top] || SEV.Medium).color};"></span><span class="font-mono text-[11px] font-medium truncate">${esc(p.pkg)}</span></span>
-          <span class="font-bold tabular-nums shrink-0" style="color:var(--text-secondary);">${p.n}</span>
-        </button>`).join('') : `<div class="col-span-2 py-6 text-center text-xs space-y-2" style="color:var(--text-secondary);"><div>${isExactDay ? `0 new CVEs published on ${esc(fmtPrettyIso(activeDt))} (${getVulnIndexedAsOf(activeDt).length} remained open).` : 'No CVEs active on this date.'}</div><button type="button" onclick="${isExactDay ? `setVulnReportDate('${activeDt}', 'report_date')` : 'clearVulnToolbarDate()'}" class="px-3 py-1 rounded-lg font-semibold pill-blue">${isExactDay ? `Show All ${getVulnIndexedAsOf(activeDt).length} Open on ${esc(fmtPrettyIso(activeDt))}` : 'Show Latest Report'}</button></div>`;
-
-      const dEntries = ['Critical', 'High', 'Medium', 'Low'].filter(k => sevs[k]).map(k => ({ key: k, label: k, val: sevs[k], color: SEV[k].color }));
-      document.getElementById('vulnDonut').innerHTML = dEntries.length
-        ? donutRingHtml(dEntries, alerts.length, 'CVEs', 'setVulnSevFromDonut')
-        : `<div class="w-full py-6 text-center text-xs" style="color:var(--text-secondary);">${isExactDay ? `0 new on ${esc(fmtPrettyIso(activeDt))} (${getVulnIndexedAsOf(activeDt).length} open)` : '0 CVEs on this date'}</div>`;
-
+      const advWrap = document.getElementById('vulnRepoAdvWrap');
+      if (advWrap) advWrap.classList.toggle('hidden', !advs.length);
       document.getElementById('vulnRepoAdv').innerHTML = advs.map(ad => `
         <a href="${esc(ad.url)}" target="_blank" rel="noopener noreferrer" class="t-row block p-3 rounded-xl border space-y-1" style="background-color:var(--bg-subtle); border-color:var(--border);">
           <div class="flex items-center justify-between"><span class="font-mono font-bold text-xs" style="color:var(--accent);">${esc(ad.ghsa_id)} ↗</span><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${(SEV[ad.severity] || SEV.Medium).pill}">${esc(ad.severity)}</span></div>
@@ -3443,12 +3314,14 @@
           const sm = SEV[v.severity] || SEV.Medium;
           const ecoCls = v.ecosystem === 'Go' ? 'pill-blue' : 'pill-purple';
           const newBadge = isNewOnDay(v) ? '<span class="ml-1.5 px-1.5 py-0 rounded text-[9px] font-bold pill-purple">NEW</span>' : '';
+          const depBadge = v.dependabot_number ? `<span class="ml-1 font-mono text-[10px]" style="color:var(--text-muted);">#${esc(v.dependabot_number)}</span>` : '';
+          const manLine = v.manifest_path ? `<div class="font-mono text-[10px] truncate max-w-[240px]" style="color:var(--text-muted);" title="${esc(v.manifest_path)}">${esc(v.manifest_path)}</div>` : '';
           return `<tr onclick="openVulnDrawer(${i})" class="t-row cursor-pointer align-middle">
-            <td class="py-3.5 px-5 whitespace-nowrap"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="font-mono font-bold hover:underline" style="color:var(--accent);">${esc(v.id)} ↗</a>${newBadge}${v.ghsa && v.ghsa !== v.id ? `<div class="font-mono text-[10px]" style="color:var(--text-muted);">${esc(v.ghsa)}</div>` : ''}</td>
+            <td class="py-3.5 px-5 whitespace-nowrap"><a href="${esc(v.url)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" class="font-mono font-bold hover:underline" style="color:var(--accent);">${esc(v.id)} ↗</a>${depBadge}${newBadge}${v.ghsa && v.ghsa !== v.id ? `<div class="font-mono text-[10px]" style="color:var(--text-muted);">${esc(v.ghsa)}</div>` : ''}</td>
             <td class="py-3.5 px-3 whitespace-nowrap"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${sm.pill}">${esc(v.severity)}</span></td>
-            <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold mr-1.5 ${ecoCls}">${esc(v.ecosystem)}</span><span class="font-mono font-semibold">${esc(v.package)}</span></td>
+            <td class="py-3.5 px-3"><div><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold mr-1.5 ${ecoCls}">${esc(v.ecosystem)}</span><span class="font-mono font-semibold">${esc(v.package)}</span></div>${manLine}</td>
             <td class="py-3.5 px-3 whitespace-nowrap font-mono text-[11px]"><span style="color:var(--text-secondary);">${esc(v.installed_version)}</span> <span class="opacity-45">→</span> <span class="font-semibold text-emerald-600">${esc(v.fixed_version)}</span></td>
-            <td class="py-3.5 px-3 whitespace-nowrap text-[11px] tabular-nums" style="color:var(--text-secondary);">${esc(fmtPrettyIso(v.published_on) || '-')}</td>
+            <td class="py-3.5 px-3 whitespace-nowrap text-[11px] tabular-nums" style="color:var(--text-secondary);">${esc(fmtPrettyIso(v.created_iso || v.published_on) || '-')}</td>
             <td class="py-3.5 px-3 text-[11px]" style="color:var(--text-secondary);"><span class="line-clamp-1">${esc(v.summary)}</span></td>
             <td class="py-3.5 px-4 text-right" style="color:var(--text-muted);">›</td>
           </tr>`;
