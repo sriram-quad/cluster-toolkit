@@ -1,0 +1,168 @@
+# Copyright 2026 "Google LLC"
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: Cluster Toolkit Unified Reports Dashboard
+
+# [AUTO SCHEDULE]
+# Runs automatically every weekday (Monday-Friday) at 11:30 UTC (5:00 PM Asia/Kolkata).
+# Also supports manual one-click runs from the Actions tab (workflow_dispatch).
+# yamllint disable-line rule:truthy
+on:
+  schedule:
+  - cron: "30 11 * * 1-5"  # Mon-Fri 5:00 PM Asia/Kolkata (11:30 UTC)
+  workflow_dispatch:
+    inputs:
+      min_age_days:
+        description: "Minimum PR age in days for stale external PR tracking"
+        required: false
+        default: "7"
+        type: string
+      exclude_quad:
+        description: "Exclude *-quad partner PRs (included by default)"
+        required: false
+        default: false
+        type: boolean
+      refresh_security:
+        description: "Fetch live Code Scanning and SBOM/OSV vulnerabilities"
+        required: false
+        default: true
+        type: boolean
+
+# [PERMISSION]
+# Strictly READ-ONLY repository permissions using the automatic GITHUB_TOKEN.
+#   - contents: read        -> Checkout scripts and read dependency-graph SBOM
+#   - pull-requests: read   -> Read open PRs, reviews, inline comments, commits, files
+#   - issues: read          -> Read PR conversation comments and labels
+#   - checks: read          -> Read PR CI check-run status
+#   - security-events: read -> Read Code Scanning (CodeQL) alert history
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  checks: read
+  security-events: read
+
+jobs:
+  cluster-toolkit-reports:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803  # v6.1.0
+      with:
+        persist-credentials: false
+
+    # [HISTORY & CACHE PERSISTENCE]
+    # Preserves daily PR snapshots and security/comment caches across runs so
+    # historical date reconstruction and day-over-day diffs work automatically.
+    - name: Restore report history and cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          cluster_toolkit_reports/history
+          cluster_toolkit_reports/reports_cache
+        key: ctk-unified-reports-${{ github.run_id }}
+        restore-keys: |
+          ctk-unified-reports-
+
+    # [STEP 1: STALE EXTERNAL PRS & EXCEL TRACKER]
+    - name: Collect Stale External PRs Snapshot and Excel Tracker
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_NAME: ${{ vars.CTK_REPORTS_TARGET_REPO || 'GoogleCloudPlatform/cluster-toolkit' }}
+        MIN_AGE_DAYS: ${{ inputs.min_age_days || '7' }}
+        EXCLUDE_QUAD: ${{ inputs.exclude_quad || 'false' }}
+        SHEET_SHARE_URL: ${{ vars.STALE_PR_SHEET_URL || '' }}
+      run: |
+        EXTRA_ARGS=()
+        if [[ "${EXCLUDE_QUAD}" == "true" ]]; then
+          EXTRA_ARGS+=("--exclude-quad")
+        fi
+        python3 tools/github/cluster_toolkit_reports/stale_pr_collector.py \
+          --repo "${REPO_NAME}" \
+          --min-age-days "${MIN_AGE_DAYS}" \
+          --output-dir cluster_toolkit_reports \
+          --github-summary "${GITHUB_STEP_SUMMARY}" \
+          --wait-on-ratelimit \
+          "${EXTRA_ARGS[@]}"
+
+    # [STEP 2: UNIFIED HTML DASHBOARD (PRS + COMMENTS + CODEQL + SBOM/OSV CVES)]
+    - name: Build Unified Cluster Toolkit Reports Dashboard
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO_NAME: ${{ vars.CTK_REPORTS_TARGET_REPO || 'GoogleCloudPlatform/cluster-toolkit' }}
+        SHEET_SHARE_URL: ${{ vars.STALE_PR_SHEET_URL || '' }}
+        REFRESH_SECURITY: ${{ inputs.refresh_security || 'true' }}
+      run: |
+        EXTRA_ARGS=()
+        if [[ "${REFRESH_SECURITY}" != "true" ]]; then
+          EXTRA_ARGS+=("--no-refresh")
+        fi
+        python3 tools/github/cluster_toolkit_reports/build_reports_dashboard.py \
+          --repo "${REPO_NAME}" \
+          --output-dir cluster_toolkit_reports \
+          --sheet-url "${SHEET_SHARE_URL}" \
+          "${EXTRA_ARGS[@]}"
+
+    - name: Save updated report history and cache
+      uses: actions/cache/save@v4
+      if: always()
+      with:
+        path: |
+          cluster_toolkit_reports/history
+          cluster_toolkit_reports/reports_cache
+        key: ctk-unified-reports-${{ github.run_id }}
+
+    # [ARTIFACT DELIVERY]
+    - name: Upload unified dashboard and Excel report artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: cluster-toolkit-reports-${{ github.run_number }}
+        path: |
+          cluster_toolkit_reports/reports_dashboard.html
+          cluster_toolkit_reports/stale_pr_master_tracker.xlsx
+          cluster_toolkit_reports/daily/
+        retention-days: 90
+
+    # [OPTIONAL GOOGLE CHAT ALERT]
+    - name: Post daily summary to Google Chat (optional)
+      if: success()
+      env:
+        GCHAT_WEBHOOK_URL: ${{ secrets.GCHAT_WEBHOOK_URL }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        if [[ -z "${GCHAT_WEBHOOK_URL}" ]]; then
+          echo "GCHAT_WEBHOOK_URL secret not configured; skipping Chat alert."
+          exit 0
+        fi
+        python3 - << 'EOF'
+        import json
+        import os
+        from pathlib import Path
+        import urllib.request
+
+        alert_text = Path("cluster_toolkit_reports/stale_pr_chat_alert_latest.txt").read_text(encoding="utf-8")
+        run_url = os.environ["RUN_URL"]
+        payload = json.dumps({
+            "text": f"{alert_text}\nUnified Reports Dashboard & Excel artifacts: {run_url}"
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            os.environ["GCHAT_WEBHOOK_URL"],
+            data=payload,
+            headers={"Content-Type": "application/json; charset=UTF-8"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            print(f"Posted Google Chat alert (HTTP {resp.status}).")
+        EOF
